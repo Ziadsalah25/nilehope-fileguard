@@ -3,21 +3,33 @@ param([ValidateRange(1024,65535)][int]$Port=8080,[switch]$SkipWindowsAgent,[swit
 $ErrorActionPreference='Stop'
 $project=$PSScriptRoot
 Set-Location -LiteralPath $project
-$docker=Get-Command docker.exe -ErrorAction SilentlyContinue
-if (-not $docker) { throw 'Install Docker Desktop for Windows with its WSL 2/Linux-container backend, start it, then double-click Start-Local.bat again. No Python or Node installation is needed.' }
+. (Join-Path $project 'deploy\local\Docker-Tools.ps1')
+$dockerTools=Get-FileGuardDockerTools
+$dockerPath=$dockerTools.DockerPath
+if (-not $dockerPath) {
+  if ($dockerTools.DesktopPath) {
+    Start-Process -FilePath $dockerTools.DesktopPath
+    throw 'Docker Desktop was found, but docker.exe is missing. Complete its setup or repair the installation to include the Docker CLI, then retry Start-Console-Only.bat.'
+  }
+  throw 'docker.exe was not found on PATH or in the usual Docker Desktop installation folders. Open Docker Desktop and finish setup, close and reopen this terminal, then retry Start-Console-Only.bat. If it still fails, repair the Docker Desktop installation.'
+}
+# Credential helpers and child processes also need Docker's bin directory.
+# This affects only the launcher process; it does not edit the system/user PATH.
+$env:Path=(Split-Path -Parent $dockerPath)+';'+$env:Path
+Write-Host "Docker CLI found: $dockerPath"
 $ErrorActionPreference='Continue'
-$engine=& docker info --format '{{.OSType}}' 2>$null
+$engine=& $dockerPath info --format '{{.OSType}}' 2>$null
 $engineExit=$LASTEXITCODE
 $ErrorActionPreference='Stop'
 if ($engineExit -ne 0) {
-  $desktop=Join-Path $env:ProgramFiles 'Docker\Docker\Docker Desktop.exe'
-  if (Test-Path $desktop) {
+  $desktop=$dockerTools.DesktopPath
+  if ($desktop) {
     Write-Host 'Starting Docker Desktop...'
     Start-Process $desktop
     for ($attempt=0;$attempt -lt 60;$attempt++) {
       Start-Sleep -Seconds 2
       $ErrorActionPreference='Continue'
-      $engine=& docker info --format '{{.OSType}}' 2>$null
+      $engine=& $dockerPath info --format '{{.OSType}}' 2>$null
       $engineExit=$LASTEXITCODE
       $ErrorActionPreference='Stop'
       if ($engineExit -eq 0) { break }
@@ -26,7 +38,7 @@ if ($engineExit -ne 0) {
 }
 if ($engineExit -ne 0) { throw 'Docker Engine is unavailable. Finish Docker Desktop/WSL setup and start Docker Desktop, then rerun the launcher.' }
 if (($engine | Out-String).Trim() -ne 'linux') { throw 'In Docker Desktop, switch to Linux containers, then rerun the launcher.' }
-& docker compose version | Out-Null
+& $dockerPath compose version | Out-Null
 if ($LASTEXITCODE -ne 0) { throw 'Docker Compose v2 is required. Update Docker Desktop.' }
 $private=Join-Path $project '.local'
 New-Item -ItemType Directory -Force $private | Out-Null
@@ -81,7 +93,7 @@ if ($Demo) {
   $compose+=@('--profile','demo')
 }
 Write-Host "Building and starting your LOCAL console at $url ..."
-$startup=Start-Process -FilePath $docker.Source -ArgumentList ($compose+@('up','-d','--build','--wait','--wait-timeout','240')) -NoNewWindow -Wait -PassThru -RedirectStandardOutput (Join-Path $private 'startup.log') -RedirectStandardError (Join-Path $private 'startup-errors.log')
+$startup=Start-Process -FilePath $dockerPath -ArgumentList ($compose+@('up','-d','--build','--wait','--wait-timeout','240')) -WorkingDirectory $project -NoNewWindow -Wait -PassThru -RedirectStandardOutput (Join-Path $private 'startup.log') -RedirectStandardError (Join-Path $private 'startup-errors.log')
 if ($startup.ExitCode -ne 0) { throw 'The local containers did not become healthy. Review .local\startup.log and Docker Desktop; the browser was not opened as a false success.' }
 $health=Invoke-RestMethod "$url/healthz" -TimeoutSec 15
 $frontend=Invoke-RestMethod "$url/frontend-health" -TimeoutSec 15

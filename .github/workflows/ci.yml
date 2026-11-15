@@ -3,6 +3,16 @@ on: [push, pull_request]
 permissions:
   contents: read
 jobs:
+  windows-launcher:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Windows PowerShell 5.1 discovery regression checks
+        shell: powershell
+        run: ./tests/Test-DockerDiscovery.ps1
+      - name: PowerShell 7 discovery regression checks
+        shell: pwsh
+        run: ./tests/Test-DockerDiscovery.ps1
   console-and-api:
     runs-on: ubuntu-latest
     steps:

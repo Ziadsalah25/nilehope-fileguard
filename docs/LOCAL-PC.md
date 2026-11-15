@@ -8,7 +8,7 @@ Docker Desktop is for your supported Windows PC. For a Windows Server deployment
 
 ## 2. Download the project
 
-On GitHub select **Code → Download ZIP**, extract it into a normal local folder, and open that folder in your Codex local project session. The local session needs terminal access to your PC so it can inspect Docker and start the project there.
+On GitHub select **Code → Download ZIP** and extract it into a normal local folder. You can launch the project directly from File Explorer; Codex is optional. For help through a local Codex session, open that same folder and give the session terminal access to your PC.
 
 ## 3. Start the console
 
@@ -23,6 +23,8 @@ powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\Start-Local.ps1 -SkipW
 `Start-Local.bat` additionally installs a separate read-only Windows monitor after a Windows administrator prompt. Start with the console-only launcher until you choose to add that agent.
 
 The launcher needs no host Python or Node installation. Image downloads and the first build can take several minutes. Open `http://localhost:8080` on this same PC. Login details are opened from `.local\login.txt` and stored privately with `.env`.
+
+If Docker Desktop is running but the launcher says it cannot find Docker, update the project code and retry. The launcher now checks both PATH and the standard system/per-user Docker Desktop folders, then uses the executable's full path. It adds Docker's command directory only to its own process environment. No permanent PATH change is needed. If the CLI files themselves are missing, complete or repair Docker Desktop setup.
 
 ## 4. Verify and stop
 

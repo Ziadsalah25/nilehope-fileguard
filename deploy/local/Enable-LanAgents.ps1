@@ -6,18 +6,22 @@ param(
 )
 $ErrorActionPreference='Stop'
 Set-Location $ProjectRoot
+. (Join-Path $ProjectRoot 'deploy\local\Docker-Tools.ps1')
+$dockerPath=(Get-FileGuardDockerTools).DockerPath
+if (-not $dockerPath) { throw 'Docker CLI was not found. Open Docker Desktop, finish its setup, then retry.' }
+$env:Path=(Split-Path -Parent $dockerPath)+';'+$env:Path
 if (-not (Test-Path '.env')) { throw 'Run Start-Local.bat first.' }
 $env:LOCAL_AGENT_HOSTNAME=$AgentHost
 $marker=Join-Path $ProjectRoot '.local\compose-project.txt'
 $projectName=if (Test-Path $marker) {(Get-Content $marker -Raw).Trim()} else {'nile-local-pc'}
 if ($projectName -notin @('nile-local-pc','nile-local-demo')) { throw 'Unexpected local project identity.' }
 $compose=@('compose','-p',$projectName,'-f','docker-compose.yml','-f','compose.local.yml','-f','compose.local-lan.yml')
-& docker @compose up -d --no-build lan-gateway
+& $dockerPath @compose up -d --no-build lan-gateway
 if ($LASTEXITCODE -ne 0) { throw 'The LAN HTTPS gateway could not start. Check whether TCP 8443 is already in use.' }
 $root=Join-Path $ProjectRoot '.local\console-root-ca.crt'
 $certificate=$null
 for ($attempt=0;$attempt -lt 15;$attempt++) {
-  $certificate=& docker @compose exec -T lan-gateway cat /data/caddy/pki/authorities/local/root.crt 2>$null
+  $certificate=& $dockerPath @compose exec -T lan-gateway cat /data/caddy/pki/authorities/local/root.crt 2>$null
   if ($LASTEXITCODE -eq 0 -and ($certificate -join "`n") -match 'BEGIN CERTIFICATE') { break }
   Start-Sleep -Seconds 2
 }
