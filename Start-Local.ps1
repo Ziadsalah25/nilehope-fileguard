@@ -4,6 +4,7 @@ $ErrorActionPreference='Stop'
 $project=$PSScriptRoot
 Set-Location -LiteralPath $project
 . (Join-Path $project 'deploy\local\Docker-Tools.ps1')
+. (Join-Path $project 'deploy\local\Local-Permissions.ps1')
 $dockerTools=Get-FileGuardDockerTools
 $dockerPath=$dockerTools.DockerPath
 if (-not $dockerPath) {
@@ -42,9 +43,7 @@ if (($engine | Out-String).Trim() -ne 'linux') { throw 'In Docker Desktop, switc
 if ($LASTEXITCODE -ne 0) { throw 'Docker Compose v2 is required. Update Docker Desktop.' }
 $private=Join-Path $project '.local'
 New-Item -ItemType Directory -Force $private | Out-Null
-$identitySid=[Security.Principal.WindowsIdentity]::GetCurrent().User.Value
-& icacls.exe $private /inheritance:r /grant:r "${identitySid}:(OI)(CI)F" '*S-1-5-18:(OI)(CI)F' '*S-1-5-32-544:(OI)(CI)F' | Out-Null
-if ($LASTEXITCODE -ne 0) { throw 'Could not protect local configuration output.' }
+Protect-FileGuardLocalPath -LiteralPath $private -Directory
 function New-Secret {
   $bytes=New-Object byte[] 32
   $generator=[Security.Cryptography.RandomNumberGenerator]::Create()
@@ -62,8 +61,7 @@ if (-not (Test-Path $environmentFile)) {
   if ($Demo) { $values.CONSOLE_ENVIRONMENT='test' }
   ($values.GetEnumerator() | ForEach-Object {"$($_.Key)=$($_.Value)"}) | Set-Content $environmentFile -Encoding ASCII
 }
-& icacls.exe $environmentFile /inheritance:r /grant:r "${identitySid}:(F)" '*S-1-5-18:(F)' '*S-1-5-32-544:(F)' | Out-Null
-if ($LASTEXITCODE -ne 0) { throw 'Could not protect .env.' }
+Protect-FileGuardLocalPath -LiteralPath $environmentFile
 $config=@{}
 foreach ($line in (Get-Content $environmentFile)) {
   if ($line -match '^([A-Z_]+)=(.*)$') {$config[$matches[1]]=$matches[2]}

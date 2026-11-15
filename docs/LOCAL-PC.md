@@ -26,6 +26,8 @@ The launcher needs no host Python or Node installation. Image downloads and the 
 
 If Docker Desktop is running but the launcher says it cannot find Docker, update the project code and retry. The launcher now checks both PATH and the standard system/per-user Docker Desktop folders, then uses the executable's full path. It adds Docker's command directory only to its own process environment. No permanent PATH change is needed. If the CLI files themselves are missing, complete or repair Docker Desktop setup.
 
+If startup reports `No mapping between account names and security IDs was done`, update the launcher and its `deploy/local/` helpers together. The corrected launcher prefixes numeric SIDs with `*` when calling Windows `icacls`. It restricts `.local` and `.env` to the current user, SYSTEM, and Administrators, and preserves existing file contents. Windows regression checks apply and inspect these real ACLs on disposable files.
+
 ## 4. Verify and stop
 
 Check **System & database** for healthy connections. The first ordinary startup has no hospital device enrollment or recovery agent. Add devices after the local console works. The C# recovery lab additionally needs .NET 10; see the root README.

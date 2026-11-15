@@ -13,6 +13,12 @@ jobs:
       - name: PowerShell 7 discovery regression checks
         shell: pwsh
         run: ./tests/Test-DockerDiscovery.ps1
+      - name: Windows PowerShell 5.1 native configuration permissions
+        shell: powershell
+        run: ./tests/Test-LocalPermissions.ps1
+      - name: PowerShell 7 native configuration permissions
+        shell: pwsh
+        run: ./tests/Test-LocalPermissions.ps1
   console-and-api:
     runs-on: ubuntu-latest
     steps:
