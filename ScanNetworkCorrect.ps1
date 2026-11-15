@@ -1,4 +1,4 @@
-# ScanNetworkCorrect.ps1
+﻿# ScanNetworkCorrect.ps1
 # For each IP we ping (Test-Connection) and, if it replies, we try a reverse DNS lookup.
 # Results are saved as JSON to network_devices.json in the script directory.
 

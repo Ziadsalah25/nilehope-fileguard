@@ -1,4 +1,4 @@
-# ScanNetwork.ps1
+﻿# ScanNetwork.ps1
 # Simple network discovery script for the Nile of Hope DLP proof‑of‑concept.
 # It scans the local IPv4 subnet, pings each address, and records any host that replies.
 # The results are written to 'network_devices.json' in the same folder.

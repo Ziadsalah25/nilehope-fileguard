@@ -1,4 +1,4 @@
-# ScanNetworkSimple.ps1
+﻿# ScanNetworkSimple.ps1
 # Writes a JSON file (network_devices.json) with any host that replies.
 
 param(
