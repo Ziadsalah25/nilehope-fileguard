@@ -1,0 +1,72 @@
+{% extends "base.html" %}
+{% block title %}{{ 'طلبات الموافقة - مستشفى نيل الأمل' if lang == 'ar' else 'Approval Requests' }}{% endblock %}
+{% block h1 %}{{ 'إدارة ومراجعة طلبات الملفات' if lang == 'ar' else 'File Access Approval Requests' }}{% endblock %}
+
+{% block content %}
+<p><a href="{{ url_for('main.request_form') }}">{{ 'إدخال طلب تمت مراجعته' if lang == 'ar' else 'Enter a reviewed request' }}</a></p>
+{% if not directory_writes_enabled %}<div class="flash warn">{{ 'تعديلات Active Directory معطلة حالياً.' if lang == 'ar' else 'Active Directory approvals are currently disabled in server configuration.' }}</div>{% endif %}
+<p class="lead">{{ 'كل عملية حذف، رفع، أو إرسال تتطلب قراراً إدارياً موثقاً قبل السماح بها على خوادم المستشفى.' if lang == 'ar' else 'Every delete, upload, or send requires an administrator decision before execution on hospital shares.' }}</p>
+
+<div class="tabs">
+  {% for t, label_ar, label_en in [('all','الكل','All'),('pending','المعلقة','Pending'),('approved','المقبولة','Approved'),('rejected','المرفوضة','Rejected')] %}
+  <a class="{{ 'on' if tab == t }}" href="{{ url_for('main.approvals', tab=t) }}">
+    {{ label_ar if lang == 'ar' else label_en }}
+    <span class="pill grey">{{ counts[t] }}</span>
+  </a>
+  {% endfor %}
+</div>
+
+<div class="card">
+  <table class="table">
+    <thead>
+      <tr>
+        <th>#</th>
+        <th>{{ 'المستخدم' if lang == 'ar' else 'User' }}</th>
+        <th>{{ 'الإجراء المطلوب' if lang == 'ar' else 'Action' }}</th>
+        <th>{{ 'مسار الملف' if lang == 'ar' else 'Target File/Folder' }}</th>
+        <th>{{ 'السبب والمبرر' if lang == 'ar' else 'Business Reason' }}</th>
+        <th>{{ 'الحالة والصلاحية' if lang == 'ar' else 'Status & Expiry' }}</th>
+        <th>{{ 'القرار الإداري' if lang == 'ar' else 'Actions' }}</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for r in rows %}
+      <tr>
+        <td><b>#{{ r.id }}</b></td>
+        <td><span class="user-pill">{{ r.requester }}</span></td>
+        <td><span class="action-tag action-{{ r.action|lower }}">{{ r.action }}</span></td>
+        <td><code>{{ r.path }}</code></td>
+        <td><small>{{ r.reason }}</small></td>
+        <td>
+          <span class="badge {{ r.status }}">{{ r.status }}</span>
+          {% if r.status == 'approved' and r.expires_at %}
+            <br><small class="text-muted">{{ 'ساري حتى:' if lang == 'ar' else 'Expires:' }} {{ r.expires_at[11:16] }} UTC</small>
+          {% endif %}
+        </td>
+        <td class="actions">
+          {% if r.status == 'pending' %}
+          <form method="post" action="{{ url_for('main.approval_action', rid=r.id, verb='approve') }}">
+            <input type="hidden" name="csrf" value="{{ csrf }}">
+            <button class="btn-sm btn-approve">{{ 'موافقة ✓' if lang == 'ar' else 'Approve ✓' }}</button>
+          </form>
+          <form method="post" action="{{ url_for('main.approval_action', rid=r.id, verb='reject') }}">
+            <input type="hidden" name="csrf" value="{{ csrf }}">
+            <button class="btn-sm ghost text-danger">{{ 'رفض ✕' if lang == 'ar' else 'Reject ✕' }}</button>
+          </form>
+          {% elif r.status == 'approved' %}
+          <form method="post" action="{{ url_for('main.approval_action', rid=r.id, verb='revoke') }}">
+            <input type="hidden" name="csrf" value="{{ csrf }}">
+            <button class="btn-sm ghost text-danger">{{ 'إلغاء الآن' if lang == 'ar' else 'Revoke Now' }}</button>
+          </form>
+          {% else %}
+          <span class="text-muted">-</span>
+          {% endif %}
+        </td>
+      </tr>
+      {% else %}
+      <tr><td colspan="7" class="empty">{{ 'لا توجد طلبات في هذا التبويب' if lang == 'ar' else 'No requests in this tab' }}</td></tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+{% endblock %}

@@ -1,0 +1,39 @@
+{% extends "public.html" %}
+{% block content %}
+<div class="request-intro">
+  <h3>{{ 'نموذج طلب إذن استثنائي للملفات' if session.get('lang', 'ar') == 'ar' else 'File Access Approval Request' }}</h3>
+  <p>{{ 'بموجب سياسات أمان مستشفى نيل الأمل، تتطلب عمليات الحذف أو الإرسال أو الرفع موافقة إدارية مؤقتة (تمنح تلقائياً لمدة 30 دقيقة فقط).' if session.get('lang', 'ar') == 'ar' else 'Hospital DLP policy requires prior approval for deleting, uploading, or sending files on hospital shares.' }}</p>
+</div>
+
+<form method="post" class="request-form">
+  <input type="hidden" name="csrf" value="{{ csrf }}">
+  
+  <label>
+    <span>{{ 'اسم المستخدم في النطاق (Windows Username)' if session.get('lang', 'ar') == 'ar' else 'Windows Username' }}</span>
+    <input name="requester" required maxlength="64" placeholder="e.g. lab.user">
+  </label>
+
+  <label>
+    <span>{{ 'نوع العملية المطلوبة' if session.get('lang', 'ar') == 'ar' else 'Action' }}</span>
+    <select name="action">
+      {% for a in actions %}
+      <option value="{{ a }}">{{ 'حذف (Delete)' if a == 'Delete' else ('رفع سحابي (Upload)' if a == 'Upload' else 'إرسال (Send)') }}</option>
+      {% endfor %}
+    </select>
+  </label>
+
+  <label>
+    <span>{{ 'مسار الملف أو المجلد على الخادم' if session.get('lang', 'ar') == 'ar' else 'Target File or Folder Path' }}</span>
+    <input name="path" required maxlength="400" placeholder="\\FILESRV\Patients\Report2026.xlsx">
+  </label>
+
+  <label>
+    <span>{{ 'سبب ومبرر الطلب (Business Justification)' if session.get('lang', 'ar') == 'ar' else 'Business Justification' }}</span>
+    <textarea name="reason" required maxlength="300" rows="3" placeholder="{{ 'يرجى توضيح سبب الحاجة لتنفيذ هذا الإجراء على الملف...' if session.get('lang', 'ar') == 'ar' else 'Explain why you need this action...' }}"></textarea>
+  </label>
+
+  <button class="btn-primary-block btn-lg" style="margin-top: 14px;">
+    {{ 'إرسال الطلب للمسؤول 📤' if session.get('lang', 'ar') == 'ar' else 'Submit Request 📤' }}
+  </button>
+</form>
+{% endblock %}

@@ -1,0 +1,13 @@
+{
+  "protectedRoot": "C:\\FileGuardLab\\protected",
+  "repositoryRoot": "C:\\FileGuardLab\\repository",
+  "stateRoot": "C:\\FileGuardLab\\state",
+  "autoRestore": false,
+  "scanSeconds": 2,
+  "settleMilliseconds": 500,
+  "maxFileBytes": 104857600,
+  "maxRestoresPerMinute": 3,
+  "serverUrl": "https://fileguard.example.local",
+  "enrollmentToken": "SET_LOCALLY_DO_NOT_COMMIT",
+  "hostname": "FILEGUARD-LAB01"
+}

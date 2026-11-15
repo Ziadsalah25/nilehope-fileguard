@@ -1,0 +1,17 @@
+.env
+.venv
+**/node_modules
+**/__pycache__
+**/*.db
+**/*keys*.json
+work
+.git
+.pytest_cache
+.ruff_cache
+network_devices.json
+
+.local
+**/bin
+**/obj
+**/hospital-profile.json
+**/hospital-shares.csv

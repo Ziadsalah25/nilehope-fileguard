@@ -1,0 +1,113 @@
+<!doctype html>
+<html lang="{{ 'ar' if lang == 'ar' else 'en' }}" dir="{{ 'rtl' if lang == 'ar' else 'ltr' }}">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>{% block title %}{{ 'نظام حماية الملفات - مستشفى نيل الأمل' if lang == 'ar' else 'File Control - Nile of Hope Hospital' }}{% endblock %}</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+<body class="{{ 'rtl' if lang == 'ar' else 'ltr' }}">
+<aside>
+  <div class="brand">
+    <div class="logo-box">
+      <img src="{{ url_for('static', filename='hospital_logo.jpg') }}" alt="مستشفى نيل الأمل" class="hospital-logo">
+    </div>
+    <div class="brand-text">
+      <h2>{{ 'مستشفى نيل الأمل' if lang == 'ar' else 'Nile of Hope' }}</h2>
+      <p class="brand-sub">{{ 'لجراحات الأطفال والإختلافات الخلقية' if lang == 'ar' else 'Pediatric Surgery Hospital' }}</p>
+      <span class="domain-tag">{{ 'إدارة ملفات المستشفى' if lang == 'ar' else 'Hospital File Control' }}</span>
+    </div>
+  </div>
+
+  <nav>
+    <a href="{{ url_for('main.overview') }}" class="{{ 'on' if request.endpoint == 'main.overview' }}">
+      <span class="nav-icon">📊</span>
+      <span class="nav-label">{{ 'لوحة المتابعة العامة' if lang == 'ar' else 'Overview Dashboard' }}</span>
+    </a>
+    <a href="{{ url_for('main.approvals') }}" class="{{ 'on' if request.endpoint == 'main.approvals' }}">
+      <span class="nav-icon">📝</span>
+      <span class="nav-label">{{ 'طلبات الموافقة' if lang == 'ar' else 'Approval Requests' }}</span>
+      {% if pending %}<span class="pill">{{ pending }}</span>{% endif %}
+    </a>
+    <a href="{{ url_for('main.devices') }}" class="{{ 'on' if request.endpoint == 'main.devices' }}">
+      <span class="nav-icon">💻</span>
+      <span class="nav-label">{{ 'إدارة الأجهزة والمحطات' if lang == 'ar' else 'Devices & Endpoints' }}</span>
+    </a>
+    <a href="{{ url_for('main.audit_page') }}" class="{{ 'on' if request.endpoint == 'main.audit_page' }}">
+      <span class="nav-icon">🛡️</span>
+      <span class="nav-label">{{ 'سجل الأمان والتدقيق' if lang == 'ar' else 'Security & Audit Log' }}</span>
+    </a>
+    <a href="{{ url_for('main.settings') }}" class="{{ 'on' if request.endpoint == 'main.settings' }}">
+      <span class="nav-icon">⚙️</span>
+      <span class="nav-label">{{ 'السياسات وإعدادات DLP' if lang == 'ar' else 'Settings & DLP Policies' }}</span>
+    </a>
+  </nav>
+
+  <div class="aside-footer">
+    <div class="shield-badge">
+      <span class="shield-icon">🔒</span>
+      <div>
+        <b>{{ 'سجل تدقيق الملفات' if lang == 'ar' else 'File Audit Console' }}</b>
+        <p>{{ 'بيانات الأحداث دون محتوى الملفات' if lang == 'ar' else 'Event metadata; no file contents collected' }}</p>
+      </div>
+    </div>
+  </div>
+</aside>
+
+<div class="wrap">
+  <header>
+    <div class="header-title">
+      <h1>{% block h1 %}{% endblock %}</h1>
+      <small class="live-indicator"><span class="pulse-dot"></span> {{ 'بيانات حية — تحديث تلقائي كل 10 ثوانٍ' if lang == 'ar' else 'Live data — refreshes every 10 seconds' }}</small>
+    </div>
+
+    <form action="{{ url_for('main.search') }}" class="search">
+      <input name="q" placeholder="{{ 'بحث عن جهاز، مستخدم، أو مسار ملف...' if lang == 'ar' else 'Search device, user, or file path...' }}" value="{{ request.args.get('q', '') }}">
+    </form>
+
+    <div class="header-actions">
+      <!-- Dark / Light Mode Toggle -->
+      <button id="themeToggle" class="btn-theme" type="button" title="{{ 'تبديل المظهر الليلي / النهاري' if lang == 'ar' else 'Toggle Dark / Light Mode' }}">
+        <span id="themeIcon">🌙</span>
+      </button>
+
+      <!-- Language toggle -->
+      <form method="post" action="{{ url_for('main.set_language') }}" class="lang-form">
+        <input type="hidden" name="csrf" value="{{ csrf }}">
+        <input type="hidden" name="lang" value="{{ 'en' if lang == 'ar' else 'ar' }}">
+        <button class="btn-lang" title="Toggle Arabic / English">
+          {{ 'English 🌐' if lang == 'ar' else 'عربي 🌐' }}
+        </button>
+      </form>
+
+      <a class="bell-btn" href="{{ url_for('main.approvals', tab='pending') }}" title="{{ 'الطلبات المعلقة' if lang == 'ar' else 'Pending approvals' }}">
+        🔔
+        {% if pending %}<span class="bell-pill">{{ pending }}</span>{% endif %}
+      </a>
+
+      <div class="user-profile">
+        <span class="user-avatar">{{ session.admin[0]|upper if session.admin else 'A' }}</span>
+        <div class="user-meta">
+          <b>{{ session.admin }}</b>
+          <small>{{ 'مسؤول النظام' if lang == 'ar' else 'Administrator' }}</small>
+        </div>
+        <form method="post" action="{{ url_for('main.logout') }}">
+          <input type="hidden" name="csrf" value="{{ csrf }}">
+          <button class="btn-signout" title="{{ 'تسجيل الخروج' if lang == 'ar' else 'Sign out' }}">
+            {{ 'خروج' if lang == 'ar' else 'Sign out' }}
+          </button>
+        </form>
+      </div>
+    </div>
+  </header>
+
+  <main>
+    {% for cat, msg in get_flashed_messages(with_categories=true) %}
+      <div class="flash {{ cat }}">{{ msg }}</div>
+    {% endfor %}
+    {% block content %}{% endblock %}
+  </main>
+</div>
+<script src="{{ url_for('static', filename='app.js') }}"></script>
+</body>
+</html>

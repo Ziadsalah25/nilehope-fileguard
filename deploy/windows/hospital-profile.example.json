@@ -1,0 +1,14 @@
+{
+  "ComputerName": "EXAMPLE-FILE01",
+  "Domain": "example.local",
+  "ServerAddress": "192.0.2.10",
+  "ConsoleHostname": "fileguard.example.local",
+  "ConsoleUrl": "https://fileguard.example.local",
+  "FileServers": [
+    "EXAMPLE-FILE01"
+  ],
+  "MonitoringPaths": [
+    "\\\\EXAMPLE-FILE01\\Lab"
+  ],
+  "DirectoryBaseDnCandidate": "DC=example,DC=local"
+}

@@ -1,0 +1,6 @@
+name: nile-local-pc
+services:
+  frontend:
+    build:
+      context: .
+      dockerfile: deploy/containers/Dockerfile.frontend

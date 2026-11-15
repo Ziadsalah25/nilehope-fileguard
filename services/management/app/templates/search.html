@@ -1,0 +1,9 @@
+{% extends "base.html" %}
+{% block title %}Search{% endblock %}
+{% block h1 %}Search: {{ term }}{% endblock %}
+{% block content %}
+<div class="card"><h3>Devices</h3><table><tr><th>Device</th><th>User</th><th>IP</th></tr>
+{% for d in devices %}<tr><td>{{ d.hostname }}</td><td>{{ d.win_user or '-' }}</td><td>{{ d.ip or '-' }}</td></tr>{% else %}<tr><td colspan="3" class="empty">No devices</td></tr>{% endfor %}</table></div>
+<div class="card"><h3>File events</h3><table><tr><th>Time</th><th>User</th><th>Device</th><th>File</th><th>Result</th></tr>
+{% for e in events %}<tr><td>{{ e.ts }}</td><td>{{ e.win_user or '-' }}</td><td>{{ e.device }}</td><td>{{ e.file or '-' }}</td><td>{{ e.result }}</td></tr>{% else %}<tr><td colspan="5" class="empty">No events</td></tr>{% endfor %}</table></div>
+{% endblock %}

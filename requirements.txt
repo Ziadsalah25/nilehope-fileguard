@@ -1,0 +1,6 @@
+Flask>=3.0,<4
+gunicorn>=22; platform_system != "Windows"
+psycopg[binary]>=3.1
+ldap3>=2.9
+waitress>=3.0,<4
+PyMySQL[rsa]>=1.1,<2

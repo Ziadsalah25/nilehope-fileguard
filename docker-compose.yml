@@ -1,0 +1,135 @@
+name: nilehope-fileguard
+x-runtime: &runtime
+  NO_PROXY: '${NO_PROXY:-localhost,127.0.0.1},backend,agent-api,database,frontend,worker'
+  no_proxy: '${NO_PROXY:-localhost,127.0.0.1},backend,agent-api,database,frontend,worker'
+  FC_ENV: ${FC_ENV:-testing}
+  SECRET_KEY: ${SECRET_KEY:?Run scripts/configure_stack.py first}
+  ENROLL_TOKEN: ${ENROLL_TOKEN:?Run scripts/configure_stack.py first}
+  DATABASE_URL: mysql://${MYSQL_USER:-dlp_app}:${MYSQL_PASSWORD:?Set MYSQL_PASSWORD}@database:3306/${MYSQL_DATABASE:-nilehope_fileguard}
+  ENABLE_REMOTE_COMMANDS: '0'
+  ENABLE_DIRECTORY_WRITES: '0'
+  STAFF_REQUESTS_ENABLED: '0'
+  ENROLLMENT_ENABLED: '1'
+  CONSOLE_ENVIRONMENT: ${CONSOLE_ENVIRONMENT:-test}
+  PUBLIC_CONSOLE_URL: ${PUBLIC_CONSOLE_URL:-http://localhost:8080}
+  HOSPITAL_SHARE_PATH: ${HOSPITAL_SHARE_PATH:-}
+services:
+  database:
+    image: ${MYSQL_IMAGE:-mysql:8.4}
+    restart: unless-stopped
+    environment:
+      MYSQL_DATABASE: ${MYSQL_DATABASE:-nilehope_fileguard}
+      MYSQL_USER: ${MYSQL_USER:-dlp_app}
+      MYSQL_PASSWORD: ${MYSQL_PASSWORD:?Set MYSQL_PASSWORD}
+      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD:?Set MYSQL_ROOT_PASSWORD}
+    command: [--character-set-server=utf8mb4, --collation-server=utf8mb4_unicode_ci]
+    volumes:
+      - mysql_data:/var/lib/mysql
+    ports:
+      - '${MYSQL_BIND_ADDRESS:-127.0.0.1}:${MYSQL_HOST_PORT:-13306}:3306'
+    healthcheck:
+      test: [CMD, mysqladmin, ping, --protocol=tcp, --host=127.0.0.1, --silent]
+      interval: 5s
+      timeout: 5s
+      retries: 30
+      start_period: 20s
+    networks: [data]
+  initialize:
+    image: nilehope-fileguard/backend:local
+    build: .
+    environment:
+      <<: *runtime
+      BOOTSTRAP_ADMIN_USER: ${BOOTSTRAP_ADMIN_USER:-admin}
+      BOOTSTRAP_ADMIN_PASSWORD: ${BOOTSTRAP_ADMIN_PASSWORD:?Set BOOTSTRAP_ADMIN_PASSWORD}
+    depends_on:
+      database: {condition: service_healthy}
+    command: [python, -m, app.bootstrap]
+    networks: [data]
+  backend:
+    image: nilehope-fileguard/backend:local
+    build: .
+    restart: unless-stopped
+    environment:
+      <<: *runtime
+      SERVICE_ROLE: console
+      AGENT_HEALTH_URL: http://agent-api:8000/healthz
+    depends_on:
+      initialize: {condition: service_completed_successfully}
+    healthcheck:
+      test: [CMD, python, -c, 'import urllib.request; urllib.request.urlopen("http://127.0.0.1:8000/healthz", timeout=3)']
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    read_only: true
+    tmpfs: [/tmp]
+    cap_drop: [ALL]
+    security_opt: [no-new-privileges:true]
+    networks: [web, data]
+  agent-api:
+    image: nilehope-fileguard/backend:local
+    restart: unless-stopped
+    environment:
+      <<: *runtime
+      SERVICE_ROLE: agent
+    depends_on:
+      initialize: {condition: service_completed_successfully}
+    healthcheck:
+      test: [CMD, python, -c, 'import urllib.request; urllib.request.urlopen("http://127.0.0.1:8000/healthz", timeout=3)']
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    read_only: true
+    tmpfs: [/tmp]
+    cap_drop: [ALL]
+    security_opt: [no-new-privileges:true]
+    networks: [web, data]
+  worker:
+    image: nilehope-fileguard/backend:local
+    restart: unless-stopped
+    environment: *runtime
+    depends_on:
+      initialize: {condition: service_completed_successfully}
+    command: [python, -m, app.worker]
+    read_only: true
+    tmpfs: [/tmp]
+    cap_drop: [ALL]
+    security_opt: [no-new-privileges:true]
+    healthcheck:
+      test: [CMD, python, -c, 'from app import create_app,audit,db; a=create_app(); c=a.app_context(); c.push(); r=db.q("SELECT value FROM settings WHERE key_name=?", ("_worker_heartbeat",), one=True); assert r and r["value"] >= audit.since(90)']
+      interval: 30s
+      timeout: 5s
+      retries: 3
+    networks: [data]
+  frontend:
+    image: nilehope-fileguard/console:local
+    build:
+      context: .
+      dockerfile: deploy/containers/Dockerfile.frontend
+    restart: unless-stopped
+    depends_on:
+      backend: {condition: service_healthy}
+      agent-api: {condition: service_healthy}
+    ports:
+      - '${FRONTEND_BIND_ADDRESS:-127.0.0.1}:${FRONTEND_PORT:-8080}:8080'
+    networks: [web]
+  lab-agents:
+    profiles: [demo]
+    image: nilehope-fileguard/backend:local
+    restart: unless-stopped
+    user: '0:0'
+    environment:
+      <<: *runtime
+      LAB_SERVER: http://agent-api:8000
+    depends_on:
+      backend: {condition: service_healthy}
+      agent-api: {condition: service_healthy}
+    volumes:
+      - lab_keys:/lab
+    command: [python, scripts/lab_fleet.py]
+    networks: [web, data]
+networks:
+  web:
+  data:
+volumes:
+  mysql_data:
+  lab_keys:

@@ -1,0 +1,108 @@
+<section class="kpis">
+  <div class="card kpi kpi-blue">
+    <div class="kpi-top">
+      <span>{{ 'الأجهزة المتصلة' if lang == 'ar' else 'Devices Online' }}</span>
+      <span class="kpi-icon">🖥️</span>
+    </div>
+    <b>{{ s.online }} <small>/ {{ s.total }}</small></b>
+    <small class="kpi-sub">{{ s.offline }} {{ 'أجهزة غير متصلة' if lang == 'ar' else 'devices offline' }}</small>
+  </div>
+
+  <div class="card kpi kpi-orange">
+    <div class="kpi-top">
+      <span>{{ 'الموافقات المعلقة' if lang == 'ar' else 'Pending Approvals' }}</span>
+      <span class="kpi-icon">⏳</span>
+    </div>
+    <b>{{ s.pending }}</b>
+    <small class="kpi-sub">{{ 'بانتظار قرار المسؤول' if s.pending else ('لا توجد طلبات معلقة' if lang == 'ar' else 'No pending requests') }}</small>
+  </div>
+
+  <div class="card kpi kpi-pink">
+    <div class="kpi-top">
+      <span>{{ 'المحاولات المحظورة اليوم' if lang == 'ar' else 'Blocked Today' }}</span>
+      <span class="kpi-icon">🚫</span>
+    </div>
+    <b>{{ s.blocked }}</b>
+    <small class="kpi-sub">{{ 'حذف أو رفع بدون إذن مسبق' if lang == 'ar' else 'Delete, upload & send without approval' }}</small>
+  </div>
+
+  <div class="card kpi kpi-teal">
+    <div class="kpi-top">
+      <span>{{ 'قرارات اليوم' if lang == 'ar' else 'Decisions Today' }}</span>
+      <span class="kpi-icon">✅</span>
+    </div>
+    <b>{{ s.decisions }}</b>
+    <small class="kpi-sub">{{ 'قرارات اتخذت اليوم' if s.decisions else ('لا توجد قرارات حتى الآن' if lang == 'ar' else 'No decisions yet today') }}</small>
+  </div>
+</section>
+
+<section class="grid2">
+  <div class="card chart-card">
+    <div class="card-head">
+      <h3>{{ 'نشاط هذا الأسبوع (محظور / مسموح)' if lang == 'ar' else "This Week's Activity" }}</h3>
+      <p class="legend">
+        <i class="dot blocked"></i> {{ 'محظور' if lang == 'ar' else 'Blocked' }}
+        <i class="dot allowed"></i> {{ 'مسموح' if lang == 'ar' else 'Allowed' }}
+      </p>
+    </div>
+    {% set m = ([1] + week|map(attribute='blocked')|list + week|map(attribute='allowed')|list)|max %}
+    <svg viewBox="0 0 440 200" class="chart" role="img" aria-label="Activity chart">
+      {% for d in week %}
+        {% set x = loop.index0 * 60 + 15 %}
+        <rect x="{{ x }}" y="{{ 165 - d.blocked / m * 140 }}" width="22" height="{{ d.blocked / m * 140 }}" rx="4" class="b-blocked"/>
+        <rect x="{{ x + 26 }}" y="{{ 165 - d.allowed / m * 140 }}" width="22" height="{{ d.allowed / m * 140 }}" rx="4" class="b-allowed"/>
+        <text x="{{ x + 24 }}" y="185" text-anchor="middle">{{ d.label }}</text>
+      {% endfor %}
+    </svg>
+  </div>
+
+  <div class="card layers-card">
+    <div class="card-head">
+      <h3>{{ 'طبقات الحماية الثلاث للمستشفى' if lang == 'ar' else 'Hospital Protection Layers' }}</h3>
+      <span class="protection-badge">{{ 'فحص مستمر' if lang == 'ar' else 'Continuous Probe' }}</span>
+    </div>
+    {% for l in layers %}
+    <div class="layer-item">
+      <div class="row">
+        <b class="layer-name">{{ l.name }}</b>
+        <span class="badge {{ 'ok' if l.ok else 'warn' }}">
+          {{ ('مفعل ومؤكد' if lang == 'ar' else 'Verified') if l.ok else ('يحتاج ربط' if lang == 'ar' else 'Unverified') }}
+        </span>
+      </div>
+      <small class="layer-desc">{{ l.line1 }}</small>
+      <small class="layer-status">{{ l.line2 }}</small>
+    </div>
+    {% endfor %}
+  </div>
+</section>
+
+<div class="card">
+  <div class="row card-head">
+    <h3>{{ 'أحدث طلبات إذن الملفات' if lang == 'ar' else 'Latest File Access Requests' }}</h3>
+    <a href="{{ url_for('main.approvals') }}" class="view-all-link">{{ 'عرض جميع الطلبات ←' if lang == 'ar' else 'View all →' }}</a>
+  </div>
+  <table class="table">
+    <thead>
+      <tr>
+        <th>#</th>
+        <th>{{ 'المستخدم' if lang == 'ar' else 'User' }}</th>
+        <th>{{ 'الإجراء' if lang == 'ar' else 'Action' }}</th>
+        <th>{{ 'مسار الملف على الخادم' if lang == 'ar' else 'Path' }}</th>
+        <th>{{ 'الحالة' if lang == 'ar' else 'Status' }}</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for r in latest %}
+      <tr>
+        <td><b>#{{ r.id }}</b></td>
+        <td><span class="user-pill">{{ r.requester }}</span></td>
+        <td><span class="action-tag action-{{ r.action|lower }}">{{ r.action }}</span></td>
+        <td><code>{{ r.path }}</code></td>
+        <td><span class="badge {{ r.status }}">{{ r.status }}</span></td>
+      </tr>
+      {% else %}
+      <tr><td colspan="5" class="empty">{{ 'لا توجد طلبات مسجلة حتى الآن' if lang == 'ar' else 'No requests yet' }}</td></tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>

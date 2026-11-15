@@ -1,0 +1,31 @@
+# Apply only on a prepared Linux Docker host with hospital DNS and trusted HTTPS.
+x-production: &production
+  FC_ENV: production
+  CONSOLE_ENVIRONMENT: hospital
+  PUBLIC_CONSOLE_URL: https://${DLP_HOSTNAME:-fileguard.example.local}
+services:
+  initialize:
+    environment: *production
+  backend:
+    environment: *production
+  agent-api:
+    environment: *production
+  worker:
+    environment: *production
+  gateway:
+    image: caddy:2-alpine
+    restart: unless-stopped
+    environment:
+      DLP_HOSTNAME: ${DLP_HOSTNAME:-fileguard.example.local}
+    ports:
+      - '${TLS_BIND_ADDRESS:-127.0.0.1}:443:443'
+    volumes:
+      - ./deploy/containers/Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy_data:/data
+      - caddy_config:/config
+    depends_on:
+      frontend: {condition: service_healthy}
+    networks: [web]
+volumes:
+  caddy_data:
+  caddy_config:

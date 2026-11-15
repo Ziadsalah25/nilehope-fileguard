@@ -1,0 +1,126 @@
+{% extends "base.html" %}
+{% block title %}{{ 'السياسات وإعدادات DLP - مستشفى نيل الأمل' if lang == 'ar' else 'Settings & DLP Policies' }}{% endblock %}
+{% block h1 %}{{ 'إعداد سياسات الحماية وخوادم الملفات' if lang == 'ar' else 'DLP Protection Policies & Hospital Shares' }}{% endblock %}
+
+{% block content %}
+<div class="flash warn">
+  {{ 'ملاحظة تشغيلية: قواعد الحظر (GPO / NTFS / Proxy) تُفرض فعلياً عبر نظام Windows وGroup Policy. وحدة التحكم تتولى الأتمتة وإدارة الصلاحيات المؤقتة.' if lang == 'ar' else 'Operational Note: Prevention switches (GPO / NTFS / Proxy) are enforced in Windows and Group Policy. This console orchestrates approvals and automated AD group membership.' }}
+</div>
+
+<form method="post" action="{{ url_for('main.settings_save') }}" class="grid2">
+  <input type="hidden" name="csrf" value="{{ csrf }}">
+  <div class="card">
+    <div class="card-head">
+      <h3>{{ 'سياسات المنع والحماية الشاملة (GPO / NTFS / Proxy)' if lang == 'ar' else 'Hospital Prevention Policies' }}</h3>
+    </div>
+    
+    <label class="switch">
+      <div>
+        <b>{{ 'حظر حذف الملفات من مشاركات الخادم (NTFS)' if lang == 'ar' else 'Block delete on file server shares' }}</b>
+        <small>{{ 'يمكن للموظفين القراءة والإنشاء، ولكن يمنع الحذف نهائياً دون موافقة مسبقة موثقة' if lang == 'ar' else 'Desired policy only; validate and apply the NTFS configuration on Windows.' }}</small>
+      </div>
+      <input type="checkbox" name="pol_delete" {{ 'checked' if s.pol_delete == '1' }}>
+    </label>
+
+    <label class="switch">
+      <div>
+        <b>{{ 'حظر الكتابة على وحدات التخزين الخارجية (USB Flash Drives)' if lang == 'ar' else 'Block USB & removable storage writes' }}</b>
+        <small>{{ 'منع نقل أو نسخ سجلات المرضى والملفات الطبية إلى فلاشات USB' if lang == 'ar' else 'Desired policy only; configure and verify Windows removable-storage policy.' }}</small>
+      </div>
+      <input type="checkbox" name="pol_usb" {{ 'checked' if s.pol_usb == '1' }}>
+    </label>
+
+    <label class="switch">
+      <div>
+        <b>{{ 'حظر الرفع إلى التخزين السحابي الشخصي (Proxy / Cloud Storage)' if lang == 'ar' else 'Block uploads to personal cloud storage' }}</b>
+        <small>{{ 'حجب مواقع التخزين غير المصرح بها (Google Drive, Dropbox, Mega)' if lang == 'ar' else 'Proxy allowlist blocks unapproved storage and file-sharing sites' }}</small>
+      </div>
+      <input type="checkbox" name="pol_cloud" {{ 'checked' if s.pol_cloud == '1' }}>
+    </label>
+
+    <label class="switch">
+      <div>
+        <b>{{ 'تقييد تشغيل البرامج غير المعتمدة (AppLocker / Whitelist)' if lang == 'ar' else 'AppLocker — approved hospital software only' }}</b>
+        <small>{{ 'منع تشغيل البرمجيات الضارة أو غير المعتمدة من قسم تكنولوجيا المعلومات' if lang == 'ar' else 'Prevent unauthorized applications and malware from running on hospital PCs' }}</small>
+      </div>
+      <input type="checkbox" name="pol_applocker" {{ 'checked' if s.pol_applocker == '1' }}>
+    </label>
+  </div>
+
+  <div>
+    <div class="card">
+      <div class="card-head">
+        <h3>{{ 'مدة صلاحية الموافقة المؤقتة' if lang == 'ar' else 'Approval Grant Duration' }}</h3>
+      </div>
+      <p><small class="text-muted">{{ 'عند الموافقة، يُضاف الموظف مؤقتاً إلى مجموعة Active Directory ويُزال تلقائياً فور انتهاء المدة.' if lang == 'ar' else 'When directory writes are enabled, approvals change action-wide AD groups. Grants are not restricted to the requested file path; Windows access-token refresh may be required.' }}</small></p>
+      
+      <div class="slider-box">
+        <input type="range" name="approval_minutes" min="5" max="120" step="5" value="{{ s.approval_minutes }}" data-show="minutes">
+        <div class="slider-val">
+          <b id="minutes">{{ s.approval_minutes }}</b>
+          <span>{{ 'دقيقة' if lang == 'ar' else 'min' }}</span>
+        </div>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-head">
+        <h3>{{ 'طلب الموافقة مطلوب لكل من:' if lang == 'ar' else 'Approval Required For:' }}</h3>
+      </div>
+      <label class="switch">
+        <span>{{ 'الحذف (Delete)' if lang == 'ar' else 'Delete' }}</span>
+        <input type="checkbox" name="req_delete" {{ 'checked' if s.req_delete == '1' }}>
+      </label>
+      <label class="switch">
+        <span>{{ 'الرفع (Upload)' if lang == 'ar' else 'Upload' }}</span>
+        <input type="checkbox" name="req_upload" {{ 'checked' if s.req_upload == '1' }}>
+      </label>
+      <label class="switch">
+        <span>{{ 'الإرسال (Send)' if lang == 'ar' else 'Send' }}</span>
+        <input type="checkbox" name="req_send" {{ 'checked' if s.req_send == '1' }}>
+      </label>
+    </div>
+
+    <button class="btn-primary-block">{{ 'حفظ إعدادات السياسات 💾' if lang == 'ar' else 'Save Settings 💾' }}</button>
+  </div>
+</form>
+
+<div class="card">
+  <div class="card-head">
+    <h3>{{ 'مسارات المشاركة المسجلة للمراقبة' if lang == 'ar' else 'Registered Share Monitoring Targets' }}</h3>
+    <small class="lead-note">{{ 'تسجيل المسار لا يغير الصلاحيات. يجب إعداد عميل خادم الملفات وتدقيق Windows.' if lang == 'ar' else 'Registering a path does not change permissions. A file-server agent and Windows auditing must be configured.' }}</small>
+  </div>
+
+  <table class="table">
+    <thead>
+      <tr>
+        <th>{{ 'مسار المجلد أو الخادم' if lang == 'ar' else 'Share Path' }}</th>
+        <th>{{ 'حالة المراقبة' if lang == 'ar' else 'Status' }}</th>
+        <th></th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for f in folders %}
+      <tr>
+        <td><code>{{ f.path }}</code></td>
+        <td><span class="badge grey">{{ 'مسجل — الحماية غير مثبتة' if lang == 'ar' else 'Registered — protection unverified' }}</span></td>
+        <td>
+          <form method="post" action="{{ url_for('main.folder_remove', fid=f.id) }}">
+            <input type="hidden" name="csrf" value="{{ csrf }}">
+            <button class="ghost btn-sm text-danger">{{ 'إزالة' if lang == 'ar' else 'Remove' }}</button>
+          </form>
+        </td>
+      </tr>
+      {% else %}
+      <tr><td colspan="3" class="empty">{{ 'لا توجد مسارات محددة' if lang == 'ar' else 'No paths listed' }}</td></tr>
+      {% endfor %}
+    </tbody>
+  </table>
+
+  <form method="post" action="{{ url_for('main.folder_add') }}" class="filters">
+    <input type="hidden" name="csrf" value="{{ csrf }}">
+    <input name="path" placeholder="\\FILESRV\Finance" required>
+    <button>{{ 'تسجيل مشاركة ➕' if lang == 'ar' else 'Register Share ➕' }}</button>
+  </form>
+</div>
+{% endblock %}

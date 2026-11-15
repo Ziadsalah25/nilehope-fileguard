@@ -1,0 +1,99 @@
+{% extends "base.html" %}
+{% block title %}{{ 'سجل الأمان والتدقيق - مستشفى نيل الأمل' if lang == 'ar' else 'Audit Log' }}{% endblock %}
+{% block h1 %}{{ 'سجل تدقيق الملفات وأمان النظام المشفر' if lang == 'ar' else 'Cryptographic File & Console Audit Log' }}{% endblock %}
+
+{% block content %}
+<p class="lead">{{ 'توثيق كامل للأنشطة: من نفذ، على أي جهاز، من أي عنوان IP، وفي أي وقت — دون حفظ محتوى الملفات أو كلمات المرور.' if lang == 'ar' else 'Who did what, on which device, from which IP, and when — no file contents or passwords are ever recorded.' }}</p>
+
+<form class="filters" method="get" action="{{ url_for('main.audit_page') }}">
+  <input name="q" value="{{ term }}" placeholder="{{ 'بحث في المستخدم، الجهاز، IP، أو اسم الملف...' if lang == 'ar' else 'Search user, device, IP, or file...' }}">
+  <select name="action">
+    <option value="">{{ 'جميع الإجراءات' if lang == 'ar' else 'All actions' }}</option>
+    {% for a in actions %}
+    <option value="{{ a }}" {{ 'selected' if a == action }}>{{ a }}</option>
+    {% endfor %}
+  </select>
+  <button>{{ 'تصفية 🔍' if lang == 'ar' else 'Filter 🔍' }}</button>
+</form>
+
+<div class="card">
+  <div class="row card-head">
+    <h3>{{ 'أحداث ملفات خادم المشاركة' if lang == 'ar' else 'File Server Events' }}</h3>
+    <span class="badge grey">{{ events|length }} {{ 'حدث' if lang == 'ar' else 'events' }}</span>
+  </div>
+  <table class="table">
+    <thead>
+      <tr>
+        <th>{{ 'الوقت' if lang == 'ar' else 'Time' }}</th>
+        <th>{{ 'المستخدم' if lang == 'ar' else 'User' }}</th>
+        <th>{{ 'الجهاز' if lang == 'ar' else 'Device' }}</th>
+        <th>IP</th>
+        <th>{{ 'الإجراء' if lang == 'ar' else 'Action' }}</th>
+        <th>{{ 'الملف' if lang == 'ar' else 'File' }}</th>
+        <th>{{ 'العملية' if lang == 'ar' else 'Process' }}</th>
+        <th>{{ 'النتيجة' if lang == 'ar' else 'Result' }}</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for e in events %}
+      <tr>
+        <td><small>{{ e.ts }}</small></td>
+        <td>{{ e.win_user or '-' }}</td>
+        <td><b>{{ e.device }}</b></td>
+        <td><small>{{ e.ip or '-' }}</small></td>
+        <td><span class="action-tag action-{{ e.action|lower }}">{{ e.action }}</span></td>
+        <td><code>{{ e.file or '-' }}</code></td>
+        <td><small>{{ e.process or '-' }}</small></td>
+        <td>
+          <span class="badge {{ 'ok' if e.result == 'allowed' else 'bad' }}">
+            {{ ('مسموح' if lang == 'ar' else 'Allowed') if e.result == 'allowed' else ('محظور' if lang == 'ar' else 'Blocked') }}
+          </span>
+        </td>
+      </tr>
+      {% else %}
+      <tr><td colspan="8" class="empty">{{ 'لا توجد أحداث مسجلة' if lang == 'ar' else 'No events recorded' }}</td></tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+
+<div class="card">
+  <div class="row card-head">
+    <div>
+      <h3>{{ 'سجل تدقيق وحدة الإدارة — التحقق بالبصمة المشفرة (SHA-256)' if lang == 'ar' else 'Console Audit Trail (SHA-256 Hash Chaining)' }}</h3>
+      <small class="text-muted">{{ 'سلسلة كتلية غير قابلة للتلاعب - أي تعديل يدوي في قاعدة البيانات يكسر السلسلة فوراً' if lang == 'ar' else 'Tamper-evident hash chain — any unauthorized direct DB modification breaks the chain immediately' }}</small>
+    </div>
+    <span class="badge {{ 'ok' if ok else 'bad' }} font-bold">
+      {% if ok %}
+        {{ 'سلامة السجل: مؤكدة وسليمة 🔒' if lang == 'ar' else 'Integrity: OK 🔒' }}
+      {% else %}
+        {{ 'تحذير: تم كسر السلسلة عند السجل رقم ' ~ broken_at ~ ' ⚠️' if lang == 'ar' else 'Integrity: BROKEN at entry ' ~ broken_at ~ ' ⚠️' }}
+      {% endif %}
+    </span>
+  </div>
+  <table class="table">
+    <thead>
+      <tr>
+        <th>{{ 'الوقت (UTC)' if lang == 'ar' else 'Time (UTC)' }}</th>
+        <th>{{ 'الفاعل' if lang == 'ar' else 'Actor' }}</th>
+        <th>{{ 'العملية' if lang == 'ar' else 'Action' }}</th>
+        <th>{{ 'الهدف' if lang == 'ar' else 'Target' }}</th>
+        <th>{{ 'النتيجة' if lang == 'ar' else 'Outcome' }}</th>
+        <th>{{ 'البصمة المشفرة (Ref Hash)' if lang == 'ar' else 'Hash Ref' }}</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for t in trail %}
+      <tr>
+        <td><small>{{ t.ts }}</small></td>
+        <td><b>{{ t.actor or '-' }}</b></td>
+        <td><code>{{ t.action }}</code></td>
+        <td><small>{{ t.target }}</small></td>
+        <td><span class="badge {{ 'ok' if t.outcome == 'success' else 'warn' }}">{{ t.outcome }}</span></td>
+        <td><code class="hash-code">{{ t.hash[:16] }}...</code></td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+{% endblock %}

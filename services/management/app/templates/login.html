@@ -1,0 +1,22 @@
+{% extends "public.html" %}
+{% block content %}
+<form method="post" class="login-form">
+  <input type="hidden" name="csrf" value="{{ csrf }}">
+  <label>
+    <span>{{ 'اسم مستخدم المسؤول (Admin Username)' if session.get('lang', 'ar') == 'ar' else 'Admin Username' }}</span>
+    <input name="username" autocomplete="username" placeholder="e.g. admin" required autofocus>
+  </label>
+  <label>
+    <span>{{ 'كلمة المرور المشفرة (Password)' if session.get('lang', 'ar') == 'ar' else 'Password' }}</span>
+    <input name="password" type="password" autocomplete="current-password" required>
+  </label>
+  <button class="btn-primary-block btn-lg" style="margin-top: 18px;">
+    {{ 'تسجيل الدخول إلى وحدة الأمان 🔒' if session.get('lang', 'ar') == 'ar' else 'Sign in to Console 🔒' }}
+  </button>
+</form>
+<div class="public-foot">
+  <small class="text-muted">
+    {{ 'نظام أمني مخصص للوصول المصرح به فقط — جميع العمليات مسجلة' if session.get('lang', 'ar') == 'ar' else 'Restricted hospital system — all access attempts are audited' }}
+  </small>
+</div>
+{% endblock %}

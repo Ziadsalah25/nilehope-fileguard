@@ -1,0 +1,6 @@
+# Optional build from an already verified apps/console/dist bundle.
+FROM nginx:1.28-alpine
+COPY deploy/containers/nginx.conf /etc/nginx/conf.d/default.conf
+COPY --chown=nginx:nginx apps/console/dist /usr/share/nginx/html
+EXPOSE 8080
+HEALTHCHECK --interval=15s --timeout=3s CMD wget -Y off -q -O /dev/null http://127.0.0.1:8080/frontend-health || exit 1

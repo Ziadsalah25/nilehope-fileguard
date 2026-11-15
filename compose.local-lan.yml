@@ -1,0 +1,19 @@
+# Optional trusted HTTPS endpoint for devices reaching the Windows PC over the LAN.
+services:
+  lan-gateway:
+    image: caddy:2-alpine
+    restart: unless-stopped
+    environment:
+      LOCAL_AGENT_HOSTNAME: ${LOCAL_AGENT_HOSTNAME:?Set the Windows PC LAN IP or DNS name}
+    ports:
+      - '${LOCAL_AGENT_BIND_ADDRESS:-0.0.0.0}:8443:8443'
+    volumes:
+      - ./deploy/containers/Caddyfile.local:/etc/caddy/Caddyfile:ro
+      - local_caddy_data:/data
+      - local_caddy_config:/config
+    depends_on:
+      frontend: {condition: service_healthy}
+    networks: [web]
+volumes:
+  local_caddy_data:
+  local_caddy_config:

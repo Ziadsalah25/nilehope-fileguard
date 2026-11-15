@@ -1,0 +1,133 @@
+{% extends "base.html" %}
+{% block title %}{{ 'الأجهزة والمحطات - مستشفى نيل الأمل' if lang == 'ar' else 'Devices & Endpoints' }}{% endblock %}
+{% block h1 %}{{ 'إدارة أجهزة النطاق والتحكم عن بعد' if lang == 'ar' else 'Domain Endpoints & Remote Control' }}{% endblock %}
+
+{% block content %}
+{% if not remote_commands_enabled %}<div class="flash warn">{{ 'الأوامر عن بعد معطلة في إعدادات الخادم.' if lang == 'ar' else 'Remote commands are disabled in server configuration.' }}</div>{% endif %}
+<div class="card">
+  <div class="card-head">
+    <h3>{{ 'خطة النشر التدريجي على نطاق المستشفى' if lang == 'ar' else 'Hospital Agent Rollout Progress' }}</h3>
+    <small class="lead-note">{{ 'المرحلة التجريبية (Pilot) ← دفعة 20 ← دفعة 50 ← باقي أجهزة المستشفى' if lang == 'ar' else 'Rollout waves: Pilot 5 → 20 → 50 → remaining devices' }}</small>
+  </div>
+  <div class="rings">
+    {% for r in rings %}
+    <div class="ring-card">
+      <div class="ring-header">
+        <b>{{ r.label }}</b>
+        <span>{{ r.online }} / {{ r.total }}</span>
+      </div>
+      <progress max="{{ r.total or 1 }}" value="{{ r.online }}"></progress>
+      <small>{{ r.online }} {{ 'متصل من' if lang == 'ar' else 'of' }} {{ r.total }} {{ 'أجهزة' if lang == 'ar' else 'connected' }}</small>
+    </div>
+    {% endfor %}
+  </div>
+</div>
+
+<div class="card">
+  <div class="card-head">
+    <h3>{{ 'الأجهزة المسجلة وحالة العميل (Agent)' if lang == 'ar' else 'Enrolled Devices & Agent Telemetry' }}</h3>
+    <small>{{ 'تحكم عن بعد: إرسال أوامر فورية للجهاز عبر اتصال العميل' if lang == 'ar' else 'Remote control: dispatch commands on the next heartbeat to endpoints' }}</small>
+  </div>
+
+  <table class="table">
+    <thead>
+      <tr>
+        <th>{{ 'اسم الجهاز' if lang == 'ar' else 'Device' }}</th>
+        <th>{{ 'مستخدم Windows' if lang == 'ar' else 'Windows User' }}</th>
+        <th>{{ 'القسم' if lang == 'ar' else 'Department' }}</th>
+        <th>IP & MAC</th>
+        <th>{{ 'نسخة Agent' if lang == 'ar' else 'Agent' }}</th>
+        <th>{{ 'مجموعة النشر' if lang == 'ar' else 'Ring' }}</th>
+        <th>{{ 'آخر ظهور' if lang == 'ar' else 'Last Seen' }}</th>
+        <th>{{ 'الحالة' if lang == 'ar' else 'Status' }}</th>
+        <th>{{ 'التحكم عن بعد' if lang == 'ar' else 'Remote Control' }}</th>
+        <th></th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for d in rows %}
+      <tr>
+        <td><b>🖥️ {{ d.hostname }}</b></td>
+        <td>{{ d.win_user or '-' }}</td>
+        <td>{{ d.department or ('غير محدد' if lang == 'ar' else 'General') }}</td>
+        <td>
+          <small>IP: {{ d.ip or '-' }}</small><br>
+          <small class="text-muted">MAC: {{ d.mac or '-' }}</small>
+        </td>
+        <td><span class="badge grey">{{ d.agent_version or '1.0.0' }}</span></td>
+        <td>
+          <form method="post" action="{{ url_for('main.device_ring', did=d.id) }}" class="inline">
+            <input type="hidden" name="csrf" value="{{ csrf }}">
+            <select name="ring" data-autosubmit class="select-sm">
+              {% for v in ['pilot','ring20','ring50','all'] %}
+              <option value="{{ v }}" {{ 'selected' if d.ring == v }}>{{ v }}</option>
+              {% endfor %}
+            </select>
+          </form>
+        </td>
+        <td><small>{{ d.last_seen or ('لم يظهر بعد' if lang == 'ar' else 'never') }}</small></td>
+        <td>
+          <span class="badge {{ 'ok' if d.last_seen and d.last_seen >= cutoff else 'bad' }}">
+            {{ ('متصل' if lang == 'ar' else 'Online') if d.last_seen and d.last_seen >= cutoff else ('غير متصل' if lang == 'ar' else 'Offline') }}
+          </span>
+        </td>
+        <td>
+          <!-- Remote Command Dropdown & Button -->
+          <form method="post" action="{{ url_for('main.device_send_command', did=d.id) }}" class="inline command-form" data-command-confirm>
+            <input type="hidden" name="csrf" value="{{ csrf }}">
+            <select name="command" class="select-sm" {{ 'disabled' if not remote_commands_enabled }}>
+              <option value="sync_policy">{{ 'تحديث السياسات' if lang == 'ar' else 'Sync Policies' }}</option>
+              <option value="lock_usb">{{ 'حظر منافذ USB' if lang == 'ar' else 'Block USB' }}</option>
+              <option value="restore_usb">{{ 'استعادة إعداد USB السابق' if lang == 'ar' else 'Restore USB setting' }}</option>
+              <option value="isolate_smb">{{ 'قطع جلسات المشاركة' if lang == 'ar' else 'Disconnect SMB' }}</option>
+              <option value="collect_logs">{{ 'سحب سجلات الفحص' if lang == 'ar' else 'Collect Logs' }}</option>
+            </select>
+            <button class="btn-sm btn-action" {{ 'disabled' if not remote_commands_enabled }}>{{ 'تنفيذ ⚡' if lang == 'ar' else 'Send ⚡' }}</button>
+          </form>
+        </td>
+        <td>
+          <form method="post" action="{{ url_for('main.device_remove', did=d.id) }}">
+            <input type="hidden" name="csrf" value="{{ csrf }}">
+            <button class="ghost btn-sm text-danger" title="{{ 'حذف الجهاز لإعادة التسجيل' if lang == 'ar' else 'Remove' }}">✕</button>
+          </form>
+        </td>
+      </tr>
+      {% else %}
+      <tr><td colspan="10" class="empty">{{ 'لا توجد أجهزة مسجلة حتى الآن. قم بنشر العميل عبر GPO.' if lang == 'ar' else 'No devices enrolled yet. Deploy agent via GPO.' }}</td></tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+
+{% if commands %}
+<div class="card">
+  <div class="card-head">
+    <h3>{{ 'سجل الأوامر المنفذة عن بعد' if lang == 'ar' else 'Recent Remote Commands History' }}</h3>
+  </div>
+  <table class="table">
+    <thead>
+      <tr>
+        <th>ID</th>
+        <th>{{ 'الجهاز' if lang == 'ar' else 'Target Device' }}</th>
+        <th>{{ 'الأمر' if lang == 'ar' else 'Command' }}</th>
+        <th>{{ 'الحالة' if lang == 'ar' else 'Status' }}</th>
+        <th>{{ 'وقت الإرسال' if lang == 'ar' else 'Created At' }}</th>
+        <th>{{ 'النتيجة' if lang == 'ar' else 'Output' }}</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for c in commands %}
+      <tr>
+        <td>#{{ c.id }}</td>
+        <td><b>{{ c.hostname }}</b></td>
+        <td><code>{{ c.command }}</code></td>
+        <td><span class="badge {{ 'ok' if c.status == 'completed' else ('bad' if c.status == 'failed' else 'warn') }}">{{ c.status }}</span></td>
+        <td><small>{{ c.created_at }}</small></td>
+        <td><small>{{ c.output or '-' }}</small></td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+{% endif %}
+{% endblock %}
