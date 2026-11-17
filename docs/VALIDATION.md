@@ -1,5 +1,19 @@
 # Validation record
 
+## 2026-11-16 manual-pilot and upload module
+
+- Full Python suite: **60 passed** in a disposable Linux container, using SQLite. Ruff passed across backend/tests. Two Linux-specific filesystem checks fail on Windows, so the full suite was run on Linux rather than treating those failures as application regressions.
+- C# engine: **10 scenarios passed on Windows**, including a monitoring-to-recovery switch across restart, verified latest-version restoration, corruption rejection, conflict preservation, rate limiting, and unavailable-root handling. The Windows symlink case remains outside these engine scenarios.
+- React/TypeScript/Vite production build and the updated Docker builds passed. All five running core services are healthy.
+- Live local Docker/MySQL workflow: a pending upload returned 403 for download; an approved file downloaded with matching bytes; a rejected file returned 403. Submission/decision/download audit records were stored. These checks used disposable test submissions visible in the local queue.
+- A real foreground C# worker on the local Windows laptop captured two versions, reported monitoring-only deletion without restoration, restarted with explicit recovery enabled, restored the latest contents, and reported its local mode and verified recovery to the Docker console. The temporary worker stopped after validation; its QA device/history remain visible as local test evidence.
+- The self-contained win-x64 package built successfully. All new PowerShell scripts parsed successfully, and Windows ACL rule construction was checked. The generated unsigned test launcher was blocked by local application-control policy; managed engine tests ran through the installed .NET runtime. Deployment executables may require organizational signing/allowlisting.
+- No recovery Windows service was installed on the real file server, no SMB share/ACL or domain/GPO was changed, and no domain user's physical device was enrolled by these checks. Service-account permissions, certificate trust, and the real SMB pilot still need validation on FILESERVER_IP.
+
+See [manual pilot instructions](MANUAL-RECOVERY-PILOT.md). Browser upload approval is an administrator-only queue with manual download/placement; it neither intercepts direct SMB uploads nor adds domain-user SSO.
+
+## Earlier isolated-workspace baseline
+
 Validated on 2026-11-15 in an isolated Linux Docker test workspace. These are prototype checks with disposable and explicitly synthetic data.
 
 - 48 Python tests passed with SQLite, and the same 48 passed against a separate disposable MySQL schema.

@@ -53,6 +53,10 @@ services:
       <<: *runtime
       SERVICE_ROLE: console
       AGENT_HEALTH_URL: http://agent-api:8000/healthz
+      UPLOAD_APPROVAL_ENABLED: ${UPLOAD_APPROVAL_ENABLED:-0}
+      UPLOAD_STORAGE_ROOT: /var/lib/fileguard/uploads
+    volumes:
+      - upload_data:/var/lib/fileguard/uploads
     depends_on:
       initialize: {condition: service_completed_successfully}
     healthcheck:
@@ -131,5 +135,6 @@ networks:
   web:
   data:
 volumes:
+  upload_data:
   mysql_data:
   lab_keys:

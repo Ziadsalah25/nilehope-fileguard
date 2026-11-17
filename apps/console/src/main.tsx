@@ -70,6 +70,7 @@ import "@fontsource-variable/inter";
 import "./style.css";
 import { api, clock, relative, type Row } from "./api";
 import Recovery from "./Recovery";
+import Uploads from "./Uploads";
 
 const Language = createContext({
   lang: "en",
@@ -518,6 +519,7 @@ function Login({ onLogin }: { onLogin: (value: any) => void }) {
 const navItems = [
   { path: "/", icon: LayoutDashboard, en: "Overview", ar: "نظرة عامة" },
   { path: "/recovery", icon: FileClock, en: "Recovery & versions", ar: "الاستعادة والإصدارات" },
+  { path: "/uploads", icon: FileCheck2, en: "Upload approvals", ar: "موافقات الرفع" },
   { path: "/devices", icon: Monitor, en: "Devices", ar: "الأجهزة" },
   {
     path: "/activity",
@@ -752,6 +754,7 @@ function Shell({ session, onLogout }: { session: any; onLogout: () => void }) {
           <Routes>
             <Route path="/" element={<Overview />} />
             <Route path="/recovery" element={<Recovery />} />
+            <Route path="/uploads" element={<Uploads enabled={Boolean(session.upload_approval_enabled)} />} />
             <Route path="/devices" element={<Devices session={session} />} />
             <Route path="/activity" element={<FileActivity />} />
             <Route path="/shares" element={<Shares />} />

@@ -56,6 +56,19 @@ Test("monitoring-only policy records deletion without restoring", lab =>
     Assert(!File.Exists(lab.File), "Auto-restore is disabled.");
     Assert(lab.Events().Any(e => e.Kind == "delete_observed"), "Deletion must be visible.");
 });
+Test("explicit switch after restart restores the latest monitored version", lab =>
+{
+    File.WriteAllText(lab.File, "monitor version one");
+    using (var monitor = new RecoveryEngine(lab.Options with { AutoRestore = false }))
+    {
+        monitor.Scan(); File.WriteAllText(lab.File, "monitor version two"); monitor.Scan();
+        File.Delete(lab.File); monitor.Scan();
+        Assert(!File.Exists(lab.File), "Monitoring must not write content back.");
+    }
+    using var recovery = new RecoveryEngine(lab.Options with { AutoRestore = true });
+    recovery.Scan();
+    Assert(File.ReadAllText(lab.File) == "monitor version two", "Explicit recovery must use the latest stable captured copy.");
+});
 Test("unavailable protected root pauses recovery", lab =>
 {
     File.WriteAllText(lab.File, "original");

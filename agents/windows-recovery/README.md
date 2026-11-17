@@ -1,5 +1,7 @@
 # C# recovery worker
 
+For the monitoring-first Windows service installer, mode switch, repeatable checks, and no-GPO domain-user test, use [the manual pilot guide](../../docs/MANUAL-RECOVERY-PILOT.md). Build a self-contained package with `scripts/Build-RecoveryPilot.ps1`. Recovery uses its own `HOST-RECOVERY` device identity alongside the existing monitoring agent.
+
 Supported .NET 10 with Windows Service hosting support. Cloud tests run the same engine in Linux foreground mode; they do not establish Windows NTFS or service readiness.
 
 ```powershell

@@ -27,3 +27,12 @@ CREATE TABLE IF NOT EXISTS recovery_events (
   id {PK}, event_key VARCHAR(64) UNIQUE NOT NULL, ts VARCHAR(40) NOT NULL, device_id INTEGER NOT NULL,
   kind VARCHAR(32) NOT NULL, relative_path VARCHAR(400) NOT NULL, version_id VARCHAR(64),
   sha256 VARCHAR(64), bytes BIGINT, message TEXT NOT NULL);
+CREATE TABLE IF NOT EXISTS recovery_agents (
+  device_id INTEGER PRIMARY KEY, host_name VARCHAR(63) NOT NULL, mode VARCHAR(16) NOT NULL,
+  protected_root VARCHAR(400) NOT NULL, monitoring_status VARCHAR(20) NOT NULL,
+  message TEXT NOT NULL, reported_at VARCHAR(40) NOT NULL);
+CREATE TABLE IF NOT EXISTS upload_requests (
+  id {PK}, storage_key VARCHAR(32) UNIQUE NOT NULL, file_name VARCHAR(255) NOT NULL,
+  sha256 VARCHAR(64) NOT NULL, bytes BIGINT NOT NULL, reason TEXT NOT NULL,
+  status VARCHAR(16) NOT NULL DEFAULT 'pending', submitted_by VARCHAR(64) NOT NULL,
+  created_at VARCHAR(40) NOT NULL, decided_by VARCHAR(64), decided_at VARCHAR(40));
