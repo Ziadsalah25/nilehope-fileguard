@@ -14,7 +14,7 @@ var configPath = Path.GetFullPath(args[1]);
 var options = JsonSerializer.Deserialize<RecoveryOptions>(File.ReadAllText(configPath), RecoveryEngine.Json)
     ?? throw new InvalidDataException("Recovery configuration is empty.");
 var builder = Host.CreateApplicationBuilder(Array.Empty<string>());
-builder.Services.AddWindowsService(o => o.ServiceName = "NileHope FileGuard Recovery");
+builder.Services.AddWindowsService(o => o.ServiceName = "NileHopeFileGuardRecoveryPilot");
 builder.Services.AddSingleton(options);
 builder.Services.AddHostedService<RecoveryWorker>();
 await builder.Build().RunAsync();
@@ -99,9 +99,17 @@ sealed class Reporter : IDisposable
             os_family = OperatingSystem.IsWindows() ? "windows" : "linux",
             os_version = System.Runtime.InteropServices.RuntimeInformation.OSDescription,
             architecture = System.Runtime.InteropServices.RuntimeInformation.OSArchitecture.ToString(),
-            agent_version = "0.1.0-recovery-lab", department = "Disposable recovery lab",
+            agent_version = "0.2.0-recovery-pilot", department = "Disposable recovery pilot",
             monitoring_status = status, monitoring_message = message
         }, cancel)) heartbeat.EnsureSuccessStatusCode();
+        using (var report = await http.PostAsJsonAsync("api/agent/recovery-status", new
+        {
+            hostName = Environment.MachineName,
+            mode = options.AutoRestore ? "recovery" : "monitoring",
+            protectedRoot = options.ProtectedRoot,
+            monitoringStatus = status,
+            message,
+        }, cancel)) report.EnsureSuccessStatusCode();
         foreach (var path in Directory.EnumerateFiles(Path.Combine(options.StateRoot, "outbox"), "*.json").Order().Take(100))
         {
             var item = JsonSerializer.Deserialize<RecoveryEvent>(File.ReadAllText(path), RecoveryEngine.Json)

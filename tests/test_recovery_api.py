@@ -59,3 +59,37 @@ def test_invalid_recovery_batch_is_rejected_before_writes(app, client, change):
     assert client.post("/api/agent/recovery-events", headers=headers, json={"events": [event(), bad]}).status_code == 400
     with app.app_context():
         assert db.q("SELECT COUNT(*) AS c FROM recovery_events", one=True)["c"] == 0
+
+
+def test_recovery_pilot_reports_mode_without_replacing_monitor_identity(app, client):
+    monitor = agent(client, "FILE01")
+    recovery = agent(client, "FILE01-RECOVERY")
+    payload = {"hostName": "FILE01", "mode": "monitoring", "protectedRoot": "D:\\Pilot\\protected",
+               "monitoringStatus": "healthy", "message": "Monitoring; no restoration."}
+    assert client.post("/api/agent/recovery-status", json=payload).status_code == 401
+    assert client.post("/api/agent/recovery-status", headers=recovery, json=payload).status_code == 200
+    payload["mode"] = "recovery"
+    for _ in range(2):
+        assert client.post("/api/agent/recovery-status", headers=recovery, json=payload).status_code == 200
+    with app.app_context():
+        assert db.q("SELECT COUNT(*) AS c FROM devices", one=True)["c"] == 2
+        assert db.q("SELECT COUNT(*) AS c FROM recovery_agents", one=True)["c"] == 1
+        assert db.q("SELECT mode FROM recovery_agents", one=True)["mode"] == "recovery"
+        assert db.q("SELECT COUNT(*) AS c FROM audit WHERE action='recovery.mode_reported'", one=True)["c"] == 2
+    assert client.post("/api/agent/heartbeat", headers=monitor, json={"agent_version": "monitor"}).status_code == 200
+    token = client.get("/api/console/session").json["csrf"]
+    client.post("/api/console/login", json={"username": "admin", "password": "TestPassword123!"}, headers={"X-CSRF-Token": token})
+    row = client.get("/api/console/recovery").json["agents"][0]
+    assert row["host_name"] == "FILE01" and row["device"] == "FILE01-RECOVERY" and row["online"]
+
+
+@pytest.mark.parametrize("field,value", [("mode", {}), ("mode", "remote"), ("protectedRoot", "bad\npath"),
+    ("hostName", "../host"), ("monitoringStatus", []), ("message", "x" * 1001)])
+def test_invalid_pilot_status_is_rejected(app, client, field, value):
+    headers = agent(client)
+    payload = {"hostName": "FILE01", "mode": "monitoring", "protectedRoot": "D:\\Pilot",
+               "monitoringStatus": "healthy", "message": "ok"}
+    payload[field] = value
+    assert client.post("/api/agent/recovery-status", headers=headers, json=payload).status_code == 400
+    with app.app_context():
+        assert db.q("SELECT COUNT(*) AS c FROM recovery_agents", one=True)["c"] == 0

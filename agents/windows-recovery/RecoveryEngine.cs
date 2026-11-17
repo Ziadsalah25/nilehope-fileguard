@@ -15,7 +15,8 @@ public sealed record RecoveryOptions
     public int MaxRestoresPerMinute { get; init; } = 3;
     public string? ServerUrl { get; init; }
     public string? EnrollmentToken { get; init; }
-    public string Hostname { get; init; } = Environment.MachineName;
+    // A separate identity lets recovery coexist with the existing monitoring agent.
+    public string Hostname { get; init; } = Environment.MachineName + "-RECOVERY";
     public bool AllowInsecureLoopback { get; init; }
 }
 

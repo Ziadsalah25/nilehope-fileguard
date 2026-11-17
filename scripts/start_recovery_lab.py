@@ -12,6 +12,7 @@ def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--dotnet", default=shutil.which("dotnet"))
     parser.add_argument("--no-build", action="store_true")
+    parser.add_argument("--enable-recovery", action="store_true", help="Explicitly restore missing files in this disposable lab; default is monitoring.")
     args = parser.parse_args()
     if not args.dotnet:
         raise SystemExit("Install the supported .NET 10 SDK, or supply --dotnet <path>.")
@@ -34,7 +35,7 @@ def main():
     if not config.exists():
         config.write_text(json.dumps({
             "protectedRoot": str(lab / "protected"), "repositoryRoot": str(lab / "repository"),
-            "stateRoot": str(lab / "state"), "autoRestore": True, "scanSeconds": 1,
+            "stateRoot": str(lab / "state"), "autoRestore": args.enable_recovery, "scanSeconds": 1,
             "settleMilliseconds": 300, "serverUrl": server,
             "enrollmentToken": values["ENROLL_TOKEN"], "hostname": "RECOVERY-LAB01",
             "allowInsecureLoopback": True,
@@ -44,13 +45,15 @@ def main():
         existing = json.loads(config.read_text())
         if existing.get("protectedRoot") != str(lab / "protected") or existing.get("serverUrl") != server:
             raise SystemExit("Existing lab configuration differs; review it before restarting.")
+        existing["autoRestore"] = args.enable_recovery
+        config.write_text(json.dumps(existing, indent=2))
     project = root / "agents/windows-recovery/FileGuard.Recovery.csproj"
     if not args.no_build:
         subprocess.run([args.dotnet, "build", str(project), "-c", "Release", "--nologo"], check=True)
     binary = project.parent / "bin/Release/net10.0/FileGuard.Recovery.dll"
     if not binary.exists():
         raise SystemExit("Build the recovery agent before using --no-build.")
-    print(f"Recovery enabled only for disposable lab data: {lab / 'protected'}", flush=True)
+    print(f"{'Recovery enabled' if args.enable_recovery else 'Monitoring only'} for disposable lab data: {lab / 'protected'}", flush=True)
     print("Ctrl+C stops the worker. No Windows service is installed by this command.", flush=True)
     child = subprocess.Popen([args.dotnet, str(binary), "--config", str(config)], cwd=root)
     try:

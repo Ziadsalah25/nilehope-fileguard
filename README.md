@@ -6,6 +6,10 @@ The recovery worker preserves stable content in a separate repository, verifies 
 
 **Windows PC:** follow [local installation steps](docs/LOCAL-PC.md), then run `Start-Console-Only.bat`.
 
+**One domain user, no GPO:** follow [the manual file-server pilot](docs/MANUAL-RECOVERY-PILOT.md). Install the existing monitoring agent on the PC and the C# recovery service on the Windows file server. Start in monitoring mode, then explicitly enable and verify recovery on a disposable share. The optional Upload approvals page holds browser submissions for administrator review and manual download/placement.
+
+For a single Windows SMB file server with a continuously hosted console VM, start with the [file-server VM pilot guide](docs/FILESERVER-VM-PILOT.md) and [Windows VM deployment guide](docs/WINDOWS_DEPLOYMENT.md). These steps cover monitor-only enrollment so share activity can be linked to supported devices. Browser, USB, and clipboard blocking remain later endpoint work.
+
 ![Recovery workspace showing disposable lab validation](docs/screenshots/recovery.png)
 
 ## Start the console locally
@@ -33,6 +37,12 @@ Requires the supported .NET 10 SDK. This script builds the C# agent, creates thr
 
 ```bash
 python scripts/start_recovery_lab.py
+```
+
+This starts in monitoring mode. After reviewing captured versions and observed deletions, stop it with Ctrl+C and explicitly enable recovery:
+
+```bash
+python scripts/start_recovery_lab.py --enable-recovery
 ```
 
 Then, in another terminal:
@@ -77,6 +87,8 @@ dotnet run --project tests/recovery-engine/FileGuard.Recovery.Tests.csproj -c Re
 ```
 
 See [validation evidence](docs/VALIDATION.md), [accepted architecture](docs/ARCHITECTURE.md), and [remaining work](docs/ROADMAP.md).
+
+The read-only comparison with the supplied DLP reference app and the server-first DLP roadmap are documented in [the reference project review](docs/REFERENCE-PROJECT-REVIEW.md).
 
 ## Scope and limits
 

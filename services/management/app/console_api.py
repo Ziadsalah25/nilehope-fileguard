@@ -45,6 +45,7 @@ def session_info():
         environment=current_app.config["CONSOLE_ENVIRONMENT"],
         remote_commands=current_app.config["ENABLE_REMOTE_COMMANDS"],
         directory_writes=current_app.config["ENABLE_DIRECTORY_WRITES"],
+        upload_approval_enabled=current_app.config["UPLOAD_APPROVAL_ENABLED"],
     )
 
 
@@ -142,6 +143,34 @@ def recovery_overview():
     from .recovery import overview
 
     return overview()
+
+
+@console.get("/uploads")
+@authenticated
+def upload_list():
+    from .uploads import listing
+    return listing()
+
+
+@console.post("/uploads")
+@authenticated
+def upload_submit():
+    from .uploads import submit
+    return submit()
+
+
+@console.post("/uploads/<int:identifier>/<decision>")
+@authenticated
+def upload_decide(identifier, decision):
+    from .uploads import decide
+    return decide(identifier, decision)
+
+
+@console.get("/uploads/<int:identifier>/download")
+@authenticated
+def upload_download(identifier):
+    from .uploads import download
+    return download(identifier)
 
 
 @console.post("/devices/<int:device_id>/ring")
@@ -354,6 +383,8 @@ def system():
         "admins",
         "settings",
         "recovery_events",
+        "recovery_agents",
+        "upload_requests",
     )
     tables = [
         {"name": name, "rows": db.q(f"SELECT COUNT(*) AS c FROM {name}", one=True)["c"]}

@@ -5,6 +5,7 @@ param(
   [ValidateSet('pilot','ring20','ring50','all')][string]$Ring = 'pilot',
   [ValidateSet('workstation','fileserver')][string]$Role = 'workstation',
   [switch]$AllowInsecureLocalhost,
+  [switch]$DirectConnection,
   [string]$StateDir=''
 )
 $ErrorActionPreference = 'Stop'
@@ -14,6 +15,10 @@ if ($uri.Scheme -ne 'https' -and -not ($AllowInsecureLocalhost -and $uri.IsLoopb
   throw 'Use HTTPS with a certificate trusted by this computer.'
 }
 [Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12
+if ($DirectConnection -and $PSVersionTable.PSVersion.Major -lt 6) {
+  # Process-local setting for this explicit internal-console connection only.
+  [Net.WebRequest]::DefaultWebProxy = $null
+}
 $Dir = if ($StateDir) { $StateDir } else { Join-Path $env:ProgramData 'FileControl' }
 $KeyFile = Join-Path $Dir 'key.txt'
 $CursorFile = Join-Path $Dir 'event-record.txt'
@@ -31,6 +36,7 @@ function Send($path, $body, $auth = $true, $method = 'Post') {
   $headers = @{}
   if ($auth) { $headers = @{ 'X-Device'=$Device; 'X-Api-Key'=(Get-Content $KeyFile -Raw).Trim() } }
   $params = @{ Method=$method; Uri="$Server$path"; Headers=$headers; TimeoutSec=20 }
+  if ($DirectConnection -and $PSVersionTable.PSVersion.Major -ge 6) { $params.NoProxy=$true }
   if ($method -eq 'Post') {
     $params.ContentType = 'application/json; charset=utf-8'
     $params.Body = [Text.Encoding]::UTF8.GetBytes(($body | ConvertTo-Json -Depth 6 -Compress))

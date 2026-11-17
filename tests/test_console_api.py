@@ -68,7 +68,8 @@ def test_runtime_inspection_schema_and_preferences(client):
     headers = authenticated(client)
     system = client.get('/api/console/system').json
     assert system['database']['connected'] is True
-    assert len(system['database']['tables']) == 10
+    assert len(system['database']['tables']) == 12
+    assert {'recovery_agents', 'upload_requests'} <= {row['name'] for row in system['database']['tables']}
     assert 'recovery_events' in {row['name'] for row in system['database']['tables']}
     assert system['configuration']['monitoring_only'] is True
     assert system['worker']['online'] is False

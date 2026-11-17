@@ -199,3 +199,11 @@ def recovery_events(dev):
     from .recovery import ingest
 
     return ingest(dev, _body())
+
+
+@api.post("/recovery-status")
+@agent_required
+def recovery_status(dev):
+    from .recovery import ingest_status
+
+    return ingest_status(dev, _body())

@@ -13,7 +13,7 @@ export async function api(
       credentials: "same-origin",
       ...options,
       headers: {
-        "Content-Type": "application/json",
+        ...(options.body instanceof FormData ? {} : { "Content-Type": "application/json" }),
         "X-CSRF-Token": csrf,
         ...options.headers,
       },
