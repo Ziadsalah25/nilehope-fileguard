@@ -113,8 +113,8 @@ def test_event_time_ip_history_is_persisted_and_event_retry_is_idempotent(
 
 def test_shared_ip_does_not_guess_a_client_device(app, client):
     server = enroll(client, "FS01")
-    one = enroll(client, "WS01")
-    two = enroll(client, "WS02")
+    enroll(client, "WS01")
+    enroll(client, "WS02")
     add_share(app)
     timestamp = audit.now()
     with app.app_context():
