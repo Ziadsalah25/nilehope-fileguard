@@ -37,3 +37,4 @@ Write-Host 'Copy all four generated files into that directory, then Add Startup-
 Write-Host 'Keep SYSVOL write access restricted to administrators. Computers applying the GPO need read access. Deploy certificate trust before the agent.'
 Write-Host 'Apply first to a pilot OU, verify heartbeats, then extend to the remaining PC OUs. Use a separate file-server GPO if server OUs differ.'
 Write-Host 'After enrollment completes, set ENROLLMENT_ENABLED=0 on the console and rotate the bootstrap token before the next enrollment window.'
+

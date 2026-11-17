@@ -4,7 +4,7 @@ import hashlib
 import re
 from datetime import UTC, datetime
 
-from flask import jsonify, request
+from flask import g, jsonify, request
 
 from . import audit, db
 
@@ -92,7 +92,53 @@ def overview():
     counts = {r["kind"]: r["c"] for r in db.q("SELECT kind,COUNT(*) AS c FROM recovery_events GROUP BY kind")}
     return jsonify(
         items=[dict(row) for row in items],
+        agents=[
+            {**dict(row), "online": row["reported_at"] >= audit.since(90)}
+            for row in db.q(
+                "SELECT r.*,d.hostname AS device FROM recovery_agents r "
+                "JOIN devices d ON d.id=r.device_id ORDER BY r.host_name"
+            )
+        ],
         stats={"versions": counts.get("version_captured", 0), "restored": counts.get("restored", 0),
                "issues": sum(counts.get(k, 0) for k in ("restore_failed", "restore_conflict", "loop_suppressed", "scan_failed"))},
         updated_at=audit.now(),
     )
+
+
+def ingest_status(device, payload):
+    """Self-reported local policy; this endpoint never issues a restore command."""
+    mode = payload.get("mode")
+    host = payload.get("hostName")
+    root = payload.get("protectedRoot")
+    status = payload.get("monitoringStatus")
+    message = payload.get("message", "")
+    if not isinstance(mode, str) or mode not in {"monitoring", "recovery"}:
+        return jsonify(error="Invalid recovery mode."), 400
+    if not isinstance(host, str) or not re.fullmatch(r"[A-Za-z0-9_-]{1,63}", host):
+        return jsonify(error="Invalid recovery host."), 400
+    if (not isinstance(root, str) or not 1 < len(root) <= 400
+            or any(ord(char) < 32 for char in root)):
+        return jsonify(error="Invalid protected root."), 400
+    if not isinstance(status, str) or status not in {"starting", "healthy", "degraded"}:
+        return jsonify(error="Invalid recovery status."), 400
+    if not isinstance(message, str) or len(message) > 1000:
+        return jsonify(error="Invalid recovery status message."), 400
+    with db.transaction():
+        # Lock the existing parent row so concurrent reports cannot race the first insert.
+        lock = " FOR UPDATE" if g.db_driver != "sqlite" else ""
+        db.q("SELECT id FROM devices WHERE id=?" + lock, (device["id"],), one=True)
+        previous = db.q("SELECT mode FROM recovery_agents WHERE device_id=?", (device["id"],), one=True)
+        if previous:
+            db.q(
+                "UPDATE recovery_agents SET host_name=?,mode=?,protected_root=?,monitoring_status=?,message=?,reported_at=? WHERE device_id=?",
+                (host, mode, root, status, message, audit.now(), device["id"]),
+            )
+        else:
+            db.q(
+                "INSERT INTO recovery_agents (device_id,host_name,mode,protected_root,monitoring_status,message,reported_at) VALUES (?,?,?,?,?,?,?)",
+                (device["id"], host, mode, root, status, message, audit.now()),
+            )
+        if not previous or previous["mode"] != mode:
+            audit.log(device["hostname"], "recovery.mode_reported", mode)
+    return jsonify(ok=True)
+
