@@ -68,8 +68,10 @@ def test_runtime_inspection_schema_and_preferences(client):
     headers = authenticated(client)
     system = client.get('/api/console/system').json
     assert system['database']['connected'] is True
-    assert len(system['database']['tables']) == 10
+    assert len(system['database']['tables']) == 13
+    assert {'recovery_agents', 'upload_requests'} <= {row['name'] for row in system['database']['tables']}
     assert 'recovery_events' in {row['name'] for row in system['database']['tables']}
+    assert 'device_ip_history' in {row['name'] for row in system['database']['tables']}
     assert system['configuration']['monitoring_only'] is True
     assert system['worker']['online'] is False
     assert client.get('/api/console/system/schema').status_code == 200
@@ -99,3 +101,4 @@ def test_service_role_route_isolation(app, role, agent_status, console_status):
     assert client.get('/healthz').status_code == 200
     assert client.get('/api/agent/config').status_code == agent_status
     assert client.get('/api/console/session').status_code == console_status
+

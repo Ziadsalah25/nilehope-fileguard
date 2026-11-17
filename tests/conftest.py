@@ -18,7 +18,7 @@ def app(tmp_path, monkeypatch):
     })
     with application.app_context():
         db.init_schema()
-        for table in ('recovery_events', 'device_commands', 'file_events', 'probes', 'folders', 'requests', 'devices', 'settings', 'audit', 'admins'):
+        for table in ('upload_requests', 'recovery_agents', 'recovery_events', 'device_commands', 'file_events', 'device_ip_history', 'probes', 'folders', 'requests', 'devices', 'settings', 'audit', 'admins'):
             db.q(f'DELETE FROM {table}')
         db.q('INSERT INTO admins (username,password_hash,created_at) VALUES (?,?,?)',
              ('admin', generate_password_hash('TestPassword123!'), audit.now()))
@@ -28,5 +28,6 @@ def app(tmp_path, monkeypatch):
 @pytest.fixture
 def client(app):
     return app.test_client()
+
 
 

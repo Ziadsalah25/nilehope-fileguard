@@ -185,7 +185,17 @@ def migrate_monitoring():
             "target_os": "VARCHAR(16) NOT NULL DEFAULT 'windows'",
             "target_host": "VARCHAR(63) NOT NULL DEFAULT ''",
         },
-        "file_events": {"event_key": "VARCHAR(64)"},
+        "file_events": {
+            "event_key": "VARCHAR(64)",
+            "source_event_id": "INTEGER",
+            "record_id": "VARCHAR(32)",
+            "logon_id": "VARCHAR(32)",
+            "handle_id": "VARCHAR(32)",
+            "access_mask": "VARCHAR(16)",
+            "share_name": "VARCHAR(128)",
+            "client_device": "VARCHAR(63)",
+            "client_match": "VARCHAR(16)",
+        },
     }
     for table, fields in changes.items():
         existing = _columns(table)
@@ -215,6 +225,29 @@ def migrate_monitoring():
         )
     if not found:
         q("CREATE UNIQUE INDEX uq_file_event_key ON file_events(event_key)")
+    if g.db_driver == "sqlite":
+        indexed = any(
+            row["name"] == "ix_device_ip_history_window"
+            for row in q("PRAGMA index_list(device_ip_history)")
+        )
+    elif g.db_driver == "mysql":
+        indexed = any(
+            row["Key_name"] == "ix_device_ip_history_window"
+            for row in q("SHOW INDEX FROM device_ip_history")
+        )
+    else:
+        indexed = bool(
+            q(
+                "SELECT 1 AS x FROM pg_indexes WHERE schemaname=current_schema() "
+                "AND tablename='device_ip_history' AND indexname='ix_device_ip_history_window'",
+                one=True,
+            )
+        )
+    if not indexed:
+        q(
+            "CREATE INDEX ix_device_ip_history_window "
+            "ON device_ip_history(ip,seen_from,seen_to)"
+        )
 
 
 def migrate_folder_identity():
@@ -275,3 +308,4 @@ def migrate_folder_identity():
     )
     if not found:
         q("CREATE UNIQUE INDEX uq_folder_target ON folders(path,target_os,target_host)")
+
