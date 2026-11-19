@@ -13,10 +13,11 @@ document.addEventListener("DOMContentLoaded", () => {
 
   function updateIcon() {
     if (document.body.classList.contains("dark-theme")) {
-      if (icon) icon.textContent = "☀️";
+      if (icon) icon.textContent = "☼";
     } else {
-      if (icon) icon.textContent = "🌙";
+      if (icon) icon.textContent = "◐";
     }
+    if (toggleBtn) toggleBtn.setAttribute("aria-pressed", document.body.classList.contains("dark-theme") ? "true" : "false");
   }
 
   updateIcon();

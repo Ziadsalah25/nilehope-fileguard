@@ -13,7 +13,7 @@
     <option value="{{ a }}" {{ 'selected' if a == action }}>{{ a }}</option>
     {% endfor %}
   </select>
-  <button>{{ 'تصفية 🔍' if lang == 'ar' else 'Filter 🔍' }}</button>
+  <button>{{ 'تصفية' if lang == 'ar' else 'Filter' }}</button>
 </form>
 
 <div class="card">
@@ -65,9 +65,9 @@
     </div>
     <span class="badge {{ 'ok' if ok else 'bad' }} font-bold">
       {% if ok %}
-        {{ 'سلامة السجل: مؤكدة وسليمة 🔒' if lang == 'ar' else 'Integrity: OK 🔒' }}
+        {{ 'سلامة السجل: مؤكدة وسليمة' if lang == 'ar' else 'Integrity: OK' }}
       {% else %}
-        {{ 'تحذير: تم كسر السلسلة عند السجل رقم ' ~ broken_at ~ ' ⚠️' if lang == 'ar' else 'Integrity: BROKEN at entry ' ~ broken_at ~ ' ⚠️' }}
+        {{ 'تحذير: تم كسر السلسلة عند السجل رقم ' ~ broken_at if lang == 'ar' else 'Integrity: BROKEN at entry ' ~ broken_at }}
       {% endif %}
     </span>
   </div>
