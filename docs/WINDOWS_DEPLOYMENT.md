@@ -80,6 +80,8 @@ Export or copy **only the public root certificate** to authorized clients and im
 
 Permit TCP 443 to the console only from approved hospital LAN client/server addresses or subnets. Keep port 8000 private and do not expose the database port to PCs. Do not configure router port-forwarding or public ingress for a LAN-only pilot. Ensure routing exists between the client VLAN and VM VLAN; a Windows Firewall allow rule cannot create a missing route.
 
+The migration script's test rule is intentionally restricted to one client address. Before domain-wide use, identify the exact client subnets to include, then update the existing inbound rule on the VM (or its authoritative firewall GPO): **Inbound Rules -> NileHope direct HTTPS test rule -> Properties -> Scope -> Remote IP address**. Retain TCP 443, the console's local address, the Python program path, and the Domain profile. Add only the approved pilot/client subnet ranges. Verify a client from each routed subnet; keep the rule limited to one IP if the pilot is still single-device.
+
 Verify from a certificate-trusting hospital computer:
 
 ```powershell
@@ -88,6 +90,18 @@ Invoke-RestMethod 'https://192.0.2.10/healthz'
 ```
 
 Expected: TCP connection succeeds and `/healthz` returns `ok: True` with no certificate warning. Open `https://192.0.2.10/login` in a browser and sign in. Review `%ProgramData%\NileHopeDLP\data\Web.log`, `Worker.log` and Task Scheduler if a task fails. Logs rotate on restart when larger than 10 MB; install continuous log retention/rotation appropriate to hospital operations before broad rollout.
+
+### Distribute the public root certificate to domain computers
+
+For a private pilot CA, distribute only its public `.cer` file through a computer GPO:
+
+1. In Group Policy Management, create a pilot GPO linked to the intended **computer OU**.
+2. Edit it at **Computer Configuration -> Policies -> Windows Settings -> Security Settings -> Public Key Policies -> Trusted Root Certification Authorities**.
+3. Right-click the store, select **Import**, and select the public FileGuard root `.cer` file. Never import or distribute the CA private key.
+4. On one pilot computer, run `gpupdate /force`, then check `Cert:\LocalMachine\Root` for the expected CA thumbprint. Confirm that client URL host matches the server certificate SAN.
+5. Test `/healthz` and the browser before linking the GPO to additional computer OUs.
+
+For production, prefer a certificate issued by the hospital PKI and distribute its issuing chain using existing certificate auto-enrollment policy. The pilot leaf certificate is valid for the configured IP only; a DNS URL needs a certificate with that DNS name in its SAN.
 
 ## 6. Register actual hospital shares
 
@@ -106,7 +120,7 @@ Copy the `agent` folder to an approved deployment location. On one pilot PC, in 
 
 ```powershell
 $token = Read-Host 'Enrollment token from the protected console runtime configuration'
-.\agents\windows-monitor\Install-LocalAgent.ps1 -ServerUrl 'https://YOUR-CONSOLE-HOSTNAME' -EnrollToken $token -Ring pilot
+.\agents\windows-monitor\Install-LocalAgent.ps1 -ServerUrl 'https://YOUR-CONSOLE-HOSTNAME' -EnrollToken $token -Ring pilot -DirectConnection
 Remove-Variable token
 ```
 
@@ -153,7 +167,7 @@ Prepare the bundle locally:
 ```powershell
 $token = Read-Host 'Enrollment token'
 .\agents\windows-monitor\Prepare-GPODeployment.ps1 -ServerUrl 'https://YOUR-CONSOLE-HOSTNAME' `
-  -EnrollToken $token -FileServers 'FILE01','FILE02' -Ring pilot
+  -EnrollToken $token -FileServers 'FILE01','FILE02' -Ring pilot -DirectConnection
 Remove-Variable token
 ```
 
@@ -163,12 +177,14 @@ The bundle contains an enrollment credential. Restrict write access to administr
 2. Under Computer Configuration -> Windows Settings -> Scripts -> Startup -> PowerShell Scripts, choose **Show Files**.
 3. Copy all generated files there, then **Add `Startup-Agent.ps1`** as the startup script.
 4. Ensure computer startup can read the policy files, and deploy certificate trust before the agent startup policy.
-5. Reboot pilot devices and verify installation/heartbeats. The bundle assigns `fileserver` role only to explicitly named server computer names.
+5. Reboot pilot devices and verify installation/heartbeats. When a device's existing agent points to a different console, the startup installer moves its old API key to a protected `key.previous-*.txt` file and enrolls with the new console. Remove that old key file after the new heartbeat is confirmed. The bundle assigns `fileserver` role only to explicitly named server computer names.
 6. Extend the validated policy to the intended PC OUs and appropriate file-server OUs. Ring labels are inventory labels; the backend does not automatically limit policy enforcement by ring.
 
 This package generates files and instructions. It does not claim a GPO exists merely because files were copied to SYSVOL. GPMC registration/linking must be performed in your actual domain.
 
-When initial enrollment is complete, set `ENROLLMENT_ENABLED` to `0` in protected `runtime.json` and restart the web task. Existing device keys continue working. Use a new enrollment token and window for later device additions; treat the initial enrollment token as visible to enrolled computers.
+The bundle stores an enrollment token in `deployment.json` in the GPO folder. Restrict read access to the pilot computers/admins, remove the temporary bundle after enrollment, set `ENROLLMENT_ENABLED` to `0` in protected `runtime.json`, and restart the web task. Existing device keys continue working. Use a new enrollment token and window for later device additions; treat the initial enrollment token as visible to enrolled computers.
+
+For the current pilot, use the console URL whose host matches the leaf certificate SAN. If agents already point to another console, the startup bundle re-enrolls them at the new URL and retains the previous API key locally as `key.previous-*.txt`; remove that file after the new heartbeat is confirmed. Never copy a previous API key or the enrollment token into chat or an unprotected share.
 
 ## 10. Backups and recovery
 
