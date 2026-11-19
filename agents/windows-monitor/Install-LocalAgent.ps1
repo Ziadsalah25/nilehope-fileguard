@@ -22,7 +22,7 @@ Copy-Item (Join-Path $PSScriptRoot 'FileControlAgent.ps1') (Join-Path $target 'F
 if (-not (Test-Path (Join-Path $target 'key.txt'))) {
   Set-Content (Join-Path $target 'enroll-token.txt') $EnrollToken -NoNewline
 }
-$arguments = '-NoProfile -NonInteractive -ExecutionPolicy Bypass -File "{0}" -Server "{1}" -Ring {2} -Role {3}' -f (Join-Path $target 'FileControlAgent.ps1'),$ServerUrl,$Ring,$Role
+$arguments = '-NoProfile -NonInteractive -File "{0}" -Server "{1}" -Ring {2} -Role {3}' -f (Join-Path $target 'FileControlAgent.ps1'),$ServerUrl,$Ring,$Role
 $arguments += ' -StateDir "' + $target + '"'
 if ($AllowInsecureLocalhost) { $arguments += ' -AllowInsecureLocalhost' }
 if ($DirectConnection) { $arguments += ' -DirectConnection' }
@@ -33,4 +33,3 @@ $settings = New-ScheduledTaskSettingsSet -ExecutionTimeLimit ([timespan]::Zero) 
 Register-ScheduledTask -TaskName $taskName -Action $action -Trigger $trigger -Principal $principal -Settings $settings -Force | Out-Null
 Start-ScheduledTask -TaskName $taskName
 Write-Host 'Agent task started. Confirm its heartbeat in the console; startup alone does not prove enrollment.'
-
