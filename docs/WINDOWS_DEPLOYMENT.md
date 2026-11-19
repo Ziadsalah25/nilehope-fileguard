@@ -162,6 +162,8 @@ Administrators can enter reviewed requests at `/request` while signed in. Anonym
 
 ## 9. Deploy agents to all intended computer OUs using GPO
 
+If the workstation or domain policy requires signed PowerShell scripts, have the project scripts signed with the organization's code-signing certificate and ensure the signer is trusted before deployment. The current local policy rejected the unsigned bundle generator; do not weaken or bypass the execution policy to run it. Use the organization's approved script-signing or endpoint-management process.
+
 Prepare the bundle locally:
 
 ```powershell
