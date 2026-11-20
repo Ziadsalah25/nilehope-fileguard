@@ -2,7 +2,7 @@
 
 ## من الصفر: الفكرة، المعمارية، تدفق البيانات، وشرح ملفات المشروع
 
-**النسخة التعليمية:** 19 نوفمبر 2026  
+**النسخة التعليمية:** 20 نوفمبر 2026  
 **الأسلوب:** عربي مبسّط قريب من المصري، مع إبقاء أسماء الملفات والمصطلحات التقنية بالإنجليزي.
 
 ---
@@ -19,7 +19,7 @@
 
 ### نطاق فهرس الملفات
 
-وقت إعداد الدليل، لقطة المشروع فيها **625 ملفًا** خارج مجلدات أدوات التطوير المحلية. الفهرس في آخر الدليل يذكر كل ملف من اللقطة ويشرح وظيفته. وفيه كمان آلاف الملفات المحلية المولّدة أو المثبّتة تحت مجلدات زي `.local` و`.pytest_cache` و`.ruff_cache` و`__pycache__`: دي SDKs ومكتبات وكاشات ونتائج تشغيل، مش كود FileGuard اللي بتعدله. الدليل بيشرحها حسب مجلدها وفئتها بدل ما يعيد شرح ملفات Microsoft وPython القياسية واحدة واحدة.
+وقت إعداد النسخة الحالية، فهرس المشروع الأساسي يضم **625 مسارًا**، وبعد إضافة ملفات حزمة الشرح الستة أصبح العدد **631 ملفًا**. الفهرس يسجل كل مسار باسمه ووظيفته، بما فيها ملفات البناء ومكتبات .NET الموزعة والصور المؤقتة. هذه المخرجات ليست كلها كودًا كتبه فريق FileGuard؛ لذلك يفصل الدليل بين المصدر الذي تطوره وبين شرح كل ناتج باسمه ونوعه. توجد كذلك أدوات وكاشات محلية تحت .local و.pytest_cache و.ruff_cache و__pycache__ وnode_modules؛ وهي بيئات ومكتبات طرف ثالث ونتائج تشغيل، لا كود FileGuard الأصلي.
 
 ملفات `.env` والشهادات ممكن يكون فيها أسرار أو مفاتيح. الدليل يشرح الغرض منها فقط، وما يعرضش قيم أسرار أو مفاتيح خاصة.
 
@@ -313,7 +313,7 @@ python scripts/start_recovery_lab.py
 
 ## 13. فهرس الملف الواحد
 
-الـPDF والموقع المرافق يعرضان فهرسًا تفصيليًا لكل ملف من الملفات الـ625، مع شرح إضافي لكل ملف مصدر أو مستند أو إعداد. المكتبات الثنائية وملفات بناء .NET وملفات PDF/PNG المؤقتة مذكورة بالاسم، ومصنفة حسب وظيفتها كاعتمادات أو مخرجات مولّدة.
+الـPDF والموقع المرافق يعرضان فهرسًا باسم ووظيفة كل مسار من ملفات اللقطة الـ631. الفصول الجديدة تشرح تدفق التنفيذ والملفات المصدرية المهمة كلًا على حدة، وتشرح الوثائق والاختبارات والإعدادات ومخرجات البناء. المكتبات الثنائية وملفات بناء .NET وملفات PDF/PNG المؤقتة مذكورة بالاسم، ومصنفة حسب وظيفتها كاعتمادات أو مخرجات مولّدة.
 
 ---
 
@@ -408,3 +408,1017 @@ FileGuard حاليًا نظام مراقبة ومعمل لاسترجاع الم�
 - وجود شهادة عامة لا يثبت أن اسم الخادم داخل الشهادة يطابق عنوان الاتصال أو أن الخدمة متاحة.
 - نجاح اختبار وحدة لا يختبر صلاحيات خادم ملفات حي أو كل أجهزة المجال.
 - ملفات الخطة والتقرير تسجل حالة وتوقعات بتاريخها؛ قارنها بالكود وإعداد البيئة الحالية.
+
+---
+
+## 20. طريقة تتبع أي تغيير داخل الكود
+
+تعامل مع FileGuard كبرنامج موزع من عمليات منفصلة. واجهة React تعمل في المتصفح، وخدمة Flask تستقبل HTTP، وقاعدة البيانات تحتفظ بالحالة، وAgent آخر يعمل على Windows أو Linux، ومحرك Recovery عملية C# منفصلة. في وضع Docker يمكن أن تعمل هذه الأدوار في حاويات منفصلة، لكنها تشترك في كود الإدارة وقاعدة البيانات.
+
+عند ضغط زر في React، اتبع هذا المسار: المكوّن في apps/console/src/main.tsx أو Recovery.tsx، ثم الطلب في api.ts، ثم endpoint في console_api.py، ثم منطق العمل في services.py أو الوحدة المتخصصة، ثم استعلام قاعدة البيانات في db.py والمخطط في schema.sql. في الرد ارجع بالعكس: صفوف قاعدة البيانات، ثم JSON، ثم حالة React، ثم العنصر الظاهر. بهذه الطريقة تعرف أي طبقة سببت المشكلة.
+
+الـAgent لا يستخدم جلسة المسؤول. يبدأ من إعداد محلي، ويسجل هويته في agent_api.py، ثم يرسل heartbeat أو metadata. لا تفترض أن HTTP 200 يثبت أن الحدث سجل في النطاق الصحيح؛ اقرأ التحقق من الهوية والمسار ونتيجة الإدخال.
+
+## 21. شرح ملفات الخادم ملفًا ملفًا
+
+### مصنع التطبيق والخدمة
+
+#### services/management/app/__init__.py
+
+مدخل تركيب Flask، وفيه create_app(config). ينشئ كائن التطبيق، يحمل إعدادات البيئة، يجهز قاعدة البيانات وCSRF، ويسجل Blueprints حسب دور الخدمة. ابدأ هنا لتعرف لماذا endpoint متاح أو لماذا يتوقف التطبيق قبل عرض الصفحة. لا تضع منطق ميزة كاملًا في المصنع؛ اترك التركيب هنا والمنطق في وحدة متخصصة.
+
+#### services/management/app/bootstrap.py
+
+تهيئة تعمل قبل الخدمة: تنشئ المخطط وتجهز مسؤول البداية إذا لم يوجد، وترفض كلمة مرور bootstrap الضعيفة. تختلف عن __init__.py الذي يبني تطبيق Flask عند كل بدء. هذا الملف يكتب إلى قاعدة البيانات، لذلك راجع البيئة والاتصال قبل استخدامه.
+
+#### services/management/app/worker.py
+
+عامل خلفية لا يحتاج متصفحًا. يحدث نبض العامل ويتابع انتهاء منح AD المؤقتة إذا كانت كتابة الدليل مفعّلة. ليس عامل نسخ احتياطي ولا ماسح ملفات؛ Recovery عملية مستقلة. عند تشخيصه افصل بين تعطل العملية، وتعذر قاعدة البيانات، وإيقاف كتابة الدليل.
+
+### واجهات API والمصادقة
+
+#### services/management/app/agent_api.py
+
+بوابة Agent. agent_required يثبت هوية الجهاز، وenroll يسجل جهازًا، وheartbeat يحدث وقت اتصاله، وagent_config يعيد إعدادات النطاق، وevents يستقبل سجل المراقبة. تشمل الوحدة أيضًا الأوامر المحدودة ونتائجها وprobe وبيانات Recovery. دوال تطبيع النص والعنوان والوقت وتاريخ IP تساعد على إسناد الحدث. لا تفرض هذه الوحدة ACL ولا تعترض طلب SMB.
+
+اتبع أي طلب بأربعة أسئلة: كيف تمت المصادقة؟ ما الحقول المقبولة؟ هل المسار داخل النطاق؟ وما الذي يحفظ في قاعدة البيانات؟ HTTP 401 يعني غالبًا أن المصادقة فشلت قبل معالجة الحدث، مثل مفتاح جهاز أو إعداد تسجيل غير صحيح.
+
+#### services/management/app/console_api.py
+
+API لوحة المسؤول. authenticated يطلب جلسة متصفح؛ وطلبات التغيير محمية بـCSRF. endpoints الأجهزة والأحداث والمشاركات تقرأ البيانات، ومسارات الإعدادات والطلبات والأوامر تغير الحالة. تنزيل upload يمر عبر قرار موافقة وحالة الملف؛ لا ينسخه تلقائيًا إلى مشاركة. عند إضافة endpoint افصل التحقق من المدخلات عن منطق العمل، واستدع services.py أو الوحدة المختصة، ولا ترجع أسرار الأجهزة.
+
+#### services/management/app/routes.py
+
+مسارات Flask للواجهة التقليدية: تسجيل الدخول، الصفحات العامة، الأجهزة، الإعدادات، سجل التدقيق، البحث والطلبات. كل route يجهز البيانات ثم يختار قالب HTML. هذه واجهة بديلة عن React، ولا يعني وجود زر فيها أن Windows فرض الإجراء.
+
+#### services/management/app/auth.py
+
+مساعدات جلسة مسؤول الويب. login_required يرفض زائرًا غير مسجل، وlocked يبطئ أو يقفل محاولات الدخول الفاشلة. لا يثبت هوية Agent؛ مفاتيح Agent منفصلة في agent_api.py. الفصل يمنع تحويل مفتاح جهاز إلى حساب مسؤول.
+
+#### services/management/app/audit.py
+
+يسجل أفعال الإدارة كسلسلة بصمات تعتمد كل واحدة فيها على السابقة، وverify يعيد الحساب لاكتشاف العبث أو الانقطاع. log يسجل الفاعل والفعل والهدف والنتيجة وقد يمنع التكرار. هذا لا يستبدل Windows Security log أو النسخ الاحتياطية المحمية.
+
+### منطق العمل وقاعدة البيانات
+
+#### services/management/app/services.py
+
+منطق الأعمال بين API وقاعدة البيانات: إعدادات النظام، الطلبات والموافقات والمنح المؤقتة، تسجيل الأجهزة، البحث عنها، طابور الأوامر المحدودة، والإحصاءات. مسار التسجيل يبدأ من endpoint ثم enroll_device، وبعدها يبحث الخادم عن الجهاز عبر device_by_key. اقرأ القواعد هنا بدل تكرارها في React أو SQL مباشر.
+
+#### services/management/app/db.py
+
+طبقة الاتصال والمعاملات. تختار قاعدة البيانات، تفتح اتصال الطلب وتغلقه، تنفذ commit أو rollback، وتنشئ المخطط والترحيلات. q ينفذ استعلامًا بمعاملات ويرجع صفًا أو قائمة. استخدم placeholders بدل تركيب قيمة المستخدم في SQL. اختبارات تعطل DB مهمة حتى لا يبدل التطبيق إلى قاعدة أخرى بصمت.
+
+#### services/management/app/schema.sql
+
+تعريف الجداول والفهارس والعلاقات الدائمة للمستخدمين والأجهزة والأحداث والمشاركات والإعدادات والطلبات والتدقيق والرفع. بعض القواعد موجودة في Python لا في SQL. عند إضافة عمود راجع الترحيل في db.py وكل endpoint يقرأه واختبار قاعدة قديمة.
+
+#### services/management/app/directory.py
+
+واجهة موحدة للدليل: تنفيذ تجريبي وLDAP. from_env يختار التنفيذ من البيئة. الوضع التجريبي لا يثبت اتصال AD حقيقيًا؛ الاتصال الحقيقي يحتاج LDAPS وشهادة موثوقة وحسابًا بأقل صلاحيات. لا تحفظ كلمة مرور حساب المجال في الكود أو التقرير.
+
+#### services/management/app/shares.py
+
+يطبع ويتحقق من مسارات UNC أو Linux ويحدد النطاق المسموح لكل Agent. هذا نطاق مراقبة وإدخال للأحداث وليس ACL؛ إزالة مسار من FileGuard لا تمنع Windows من الحذف.
+
+#### services/management/app/telemetry.py
+
+يتحقق من صحة بيانات الصحة القادمة من Linux: نوع الحقل وحدوده وما يسمح بتخزينه. فصله يحمي قاعدة البيانات من payload عشوائي. لا يفحص محتوى الملفات ولا يتحكم في USB أو المتصفح.
+
+#### services/management/app/recovery.py
+
+يتحقق من أحداث Recovery القادمة من محرك C#، ويزيل التكرارات ويجهز ملخص لوحة التحكم. لا ينفذ restore على الخادم؛ الاستعادة قرار محلي لمحرك Recovery وفق إعداداته.
+
+#### services/management/app/uploads.py
+
+منطق رفع اختياري: حالة التفعيل، التخزين، حدود الحجم، اسم UUID، البصمة، قرار المسؤول والتنزيل المقبول. الملف يذهب إلى مخزن الرفع، لا إلى SMB تلقائيًا. راجع المسارات التي تتعامل مع الملف قبل توسيع الميزة.
+
+### قوالب HTML التقليدية، واحدًا واحدًا
+
+#### services/management/app/templates/base.html
+
+الغلاف المشترك: اتجاه اللغة والتنقل والبحث وتحميل CSS وJavaScript ورمز CSRF وتسجيل الخروج. أي تغيير عام في رأس النسخة التقليدية يبدأ هنا.
+
+#### services/management/app/templates/login.html
+
+نموذج اسم المسؤول وكلمة المرور ورمز CSRF. يرسل المدخلات إلى route الدخول؛ لا يتحقق من كلمة المرور بنفسه.
+
+#### services/management/app/templates/overview.html
+
+الهيكل الكامل لصفحة الملخص، ويضم أجزاء الإحصاءات من _overview.html. قارنه بالـroute لتعرف أي قيم يجهزها الخادم.
+
+#### services/management/app/templates/_overview.html
+
+جزء HTML قابل لإعادة الاستخدام لبطاقات وإحصاءات الملخص. الشرطة في الاسم اصطلاح لبيان أنه ليس صفحة route مستقلة.
+
+#### services/management/app/templates/devices.html
+
+جدول الأجهزة وخيارات الحلقة والأمر المحدود وإزالة السجل. نماذج التغيير تحتاج CSRF والأوامر تمر عبر allowlist والميزة المقيدة. إزالة سجل الجهاز لا تزيل حساب Windows أو عضويته في الدومين.
+
+#### services/management/app/templates/approvals.html
+
+يعرض الطلبات وحالاتها وأزرار القبول والرفض والإلغاء. القالب يرسل النموذج؛ route ومنطق الأعمال يتحققان من التداخل والمدة والقرار.
+
+#### services/management/app/templates/request.html
+
+يجمع الطالب والإجراء والمسار والسبب. route يتحقق ويحفظه كطلب؛ كتابة مسار هنا لا تضيف مشاركة للمراقبة تلقائيًا.
+
+#### services/management/app/templates/audit.html
+
+يعرض سجل إدارة الكونسول وفلاتره. ليس سجلًا كاملًا لكل قراءة أو كتابة SMB؛ أحداث المشاركة مصدرها Agent وWindows.
+
+#### services/management/app/templates/settings.html
+
+نماذج إعدادات الميزات والسياسات والمسارات. route يراجع القيم ويحفظها. علامة إعداد لا تثبت وحدها أن نظام التشغيل يطبق منعًا.
+
+#### services/management/app/templates/search.html
+
+يعرض نتائج بحث مسموح بها مع حدود للنتائج. لا تجعل النص الموجود في نتيجة بحث دليلًا على هوية شخص أو صلاحية وصول.
+
+#### services/management/app/templates/public.html
+
+محتوى عام لا يحتاج جلسة مسؤول؛ أبقه خاليًا من تفاصيل الأجهزة وأسرار الإعداد.
+
+#### services/management/app/static/app.js
+
+تفاعلات صفحات Flask التقليدية وطلبات التحديث الجزئي. مصدر البيانات هو endpoint؛ عند فشل العرض افحص Network ثم الاستجابة قبل تعديل DOM وحده.
+
+#### services/management/app/static/style.css
+
+ألوان وتخطيط واجهة Flask التقليدية، مستقلان عن CSS في React. hospital_logo.jpg أصل بصري للقوالب وليس منطق تشغيل.
+
+## 22. لوحة React ملفًا ملفًا
+
+#### apps/console/index.html
+
+مدخل المتصفح وعنصر DOM الذي تستضيف داخله React. لا تضع صفحات Dashboard هنا؛ المكونات هي التي ترسمها.
+
+#### apps/console/src/main.tsx
+
+المدخل الرئيسي للواجهة: سياق اللغة والإشعارات، حالات التحميل والخطأ، تسجيل الدخول، التنقل وصفحات الملخص والأجهزة والنشاط والمشاركات والموافقات والتدقيق والنظام. ابدأ بـApp، ثم اختر صفحة واحدة واتبع دالة API التي تستخدمها؛ لا تعدل الملف كله دفعة واحدة.
+
+#### apps/console/src/api.ts
+
+غلاف fetch موحد يضيف مسار API وCSRF، يحول أخطاء HTTP إلى أخطاء مفهومة، ويقدم مساعدات للوقت والمسارات. استخدمه بدل تكرار fetch كي تتصرف الصفحات بالطريقة نفسها.
+
+#### apps/console/src/Recovery.tsx
+
+واجهة تقرأ ملخص وحوادث Recovery وتفلترها وتحدثها دوريًا. هي شاشة عرض؛ لا تشغل برنامجًا على الجهاز ولا تغير AutoRestore من المتصفح.
+
+#### apps/console/src/Uploads.tsx
+
+عرض طلبات الرفع وإرسال ملف وقبول أو رفض طلب وتنزيل المقبول. الخادم يعيد التحقق من الصلاحية والحالة؛ لا تعتمد على قرار الواجهة فقط.
+
+#### apps/console/src/style.css
+
+ألوان ومسافات وجداول وبطاقات وتصميم متجاوب لواجهة React. عدل المصدر ثم أعد البناء؛ لا تصلح ملفات CSS المضغوطة في dist يدويًا.
+
+#### apps/console/package.json
+
+أوامر npm والاعتمادات المباشرة. اقرأ scripts لمعرفة أوامر build وdev، وdependencies لمعرفة المكتبات التي يستوردها المصدر.
+
+#### apps/console/package-lock.json
+
+يثبت أرقام الاعتمادات الدقيقة والمتداخلة حتى تتكرر عملية تثبيت npm. عدل الاعتمادات عبر npm ليحدث الملف تلقائيًا.
+
+#### apps/console/vite.config.ts
+
+إعداد خادم تطوير Vite وتجميع الواجهة ومسار الناتج. راجعه مع إعداد web server عند تغيير proxy أو مكان البناء.
+
+#### apps/console/tsconfig.json
+
+خيارات TypeScript: اللغة والوحدات وJSX والأنواع. لا يضبط تشغيل Flask.
+
+#### apps/console/tsconfig.tsbuildinfo
+
+بيانات مؤقتة لتسريع incremental build؛ يعيد TypeScript توليدها ولا تعدل يدويًا.
+
+#### apps/console/public/favicon.svg
+
+أيقونة المتصفح بصيغة SVG؛ أصل بصري فقط.
+
+#### apps/console/public/agents/windows-agent.zip وapps/console/public/agents/linux-agent.zip
+
+حزمتان ساكنتان للتنزيل. تغيير مصدر Agent لا يحدث ZIP تلقائيًا؛ راجع المحتوى وتأكد أنه لا يتضمن token أو سرًا قبل توزيعه.
+
+## 23. وكلاء المراقبة: كل سكربت يؤدي دورًا محددًا
+
+#### agents/windows-monitor/FileControlAgent.ps1
+
+عميل Windows: يقرأ الإعداد المحلي، يسجل الجهاز عبر Ensure-Enrolled، يرسل heartbeat ويجلب config، ثم يقرأ سجلات Security ويطبع الأحداث ويربطها عبر Forward-Events. In-Scope يقصر الإرسال على المسارات المسجلة، وحفظ correlation state يساعد على ربط الأحداث التي تنتمي إلى نفس عملية الملف. Process-Command يقبل allowlist فقط، والتنفيذ عن بعد مقفول افتراضيًا. لا يوجد hook يعترض زر Delete أو يمنع SMB.
+
+#### agents/windows-monitor/Install-LocalAgent.ps1
+
+يثبت الملفات في ProgramData، يضبط ACL على الإعداد والاعتماد المحلي، وينشئ Scheduled Task. تحقق من هوية الحساب وشهادة HTTPS قبل التوزيع. لا يفتح Firewall ولا ينشئ GPO.
+
+#### agents/windows-monitor/Install-LocalAgent.bat
+
+غلاف بسيط يبدأ مثبت PowerShell؛ منطق التثبيت في ps1.
+
+#### agents/windows-monitor/Prepare-GPODeployment.ps1
+
+يجهز ملفات startup لـGPO للمراجعة والتوزيع على نطاق OU مختار؛ لا ينشئ GPO ولا يربطها تلقائيًا.
+
+#### agents/windows-monitor/Deploy-FileControlGPO.ps1
+
+غلاف توافق يستدعي إعداد حزمة GPO، وليس أمرًا لتغيير Active Directory بالكامل.
+
+#### agents/linux/linux_agent.py
+
+يجمع صحة Linux ويقارن snapshots للمجلد. scan_directory يقرأ metadata دون محتوى الملف، ويتعامل بحذر مع الروابط الرمزية وحدود العدد؛ compare_snapshots يستنتج تغييرات، وAgent يدير الإرسال والحالة المحلية. يختلف مصدر رؤيته عن سجل Windows، وقد لا يستطيع إثبات صاحب حدث عند تغير IP أو توقف المسح.
+
+#### agents/linux/install_linux.py
+
+مساعد إعداد وتشغيل Agent Linux. اقرأ أوامر الإنشاء ومواضع الإعداد والخدمة قبل تشغيلها، وامنح أقل صلاحية لازمة. نجاح التثبيت لا يثبت حصول enrollment وheartbeat.
+
+## 24. محرك Recovery بـ C#
+
+#### agents/windows-recovery/Program.cs
+
+مدخل Generic Host الذي يقرأ config ويختار خدمة Windows أو foreground. Reporter يسجل هوية Recovery منفصلة عن Agent المراقبة، ويرسل heartbeat والحالة ويحتفظ بالأحداث في outbox حتى إقرار الخادم.
+
+#### agents/windows-recovery/RecoveryEngine.cs
+
+محرك حفظ نسخ محلي تجريبي. يفصل ProtectedRoot عن RepositoryRoot وStateRoot، ويرفض جذر القرص والمجلدات المتداخلة والروابط الرمزية، ويأخذ قفل instance واحدة. Scan لا يعتبر الغياب حذفًا قبل اكتمال traversal. Capture ينتظر ثبات الملف، يحد الحجم، يحسب SHA-256 ويحفظ blob وmanifest. في الوضع الافتراضي يسجل الحذف فقط؛ الاستعادة التجريبية لا تحدث إلا بإعداد صريح وبعد التحقق من النسخة، ووجود المجلد الأب، وغياب الوجهة، مع حد تكرار. لا يستعيد كل خصائص NTFS ولا يمنع الحذف قبل وقوعه، ومستودع الملفات المحلي ليس backup مقاومًا لاختراق الخادم.
+
+#### agents/windows-recovery/config.example.json
+
+قالب أسماء إعدادات المسارات والمهلة والحجم وAutoRestore والسيرفر. ليس فيه token صالح؛ احفظ الإعداد الحقيقي بACL محلية خارج Git.
+
+#### agents/windows-recovery/FileGuard.Recovery.csproj
+
+إعداد مشروع .NET: target framework والاعتمادات والتحذيرات وإشارة خدمة Windows. يستخدمه dotnet في restore/build ولا يحدد سياسة المجلدات بنفسه.
+
+#### agents/windows-recovery/README.md
+
+دليل تشغيل مكون Recovery وحدوده ومجلدات التجربة. اقرأه مع ملف الإعداد والاختبارات قبل تغيير سياسة.
+
+#### agents/windows-recovery/Install-RecoveryPilot.ps1
+
+مساعد يجهز خدمة ومجلدات Pilot؛ قد ينشئ خدمة أو يغير ACL محلية، فراجع المسارات والأثر قبل التنفيذ.
+
+#### agents/windows-recovery/Set-RecoveryPilotMode.ps1
+
+يغير وضع التجربة؛ الانتقال للاستعادة قد يكتب ملفات فعلية في المسار المحدد، لذلك لا توجهه إلى بيانات إنتاج.
+
+#### agents/windows-recovery/Test-RecoveryPilot.ps1
+
+يشغل سيناريوهات تجربة على نطاق Recovery مهيأ؛ ليس بديلًا عن اختبار المصدر أو مراجعة موافقة أصحاب البيانات.
+
+#### agents/windows-recovery/Recovery-PilotTools.ps1
+
+دوال مساعدة للتحقق من المسارات المحلية وصلاحيات المجلد وقراءة الإعداد وكتابة JSON. افهم حدود المسار قبل إعادة استعمالها.
+
+## 25. الاختبارات: كل مجموعة تسأل سؤالًا مختلفًا
+
+#### tests/conftest.py
+
+Fixtures مشتركة لـpytest: تطبيق وقاعدة اختبار وعميل HTTP وحسابات أو مساعدات. اقرأ تعريف fixture المستخدم في الاختبار لتعرف هل البيانات مؤقتة أو يعتمد على خدمة فعلية.
+
+#### tests/test_console.py
+
+يغطي تسجيل الدخول والصفحات وCSRF وقفل الدخول، بوابات المراقبة، تداخل الطلبات وانتهاء الموافقات، allowlist الأوامر وتزامنها، enrollment وحماية مفتاح الجهاز، payload غير صالح، نطاق المشاركة، استيراد المسارات، كشف عبث audit، rollback، فشل DB والمخطط، واشتراط أسرار الإنتاج. هذه اختبارات backend ولا تختبر ACL على خادم حي.
+
+#### tests/test_console_api.py
+
+يركز على جلسة المسؤول وCSRF والخروج، عدم تسريب بيانات اعتماد الجهاز، إضافة وإزالة المشاركة، فلترة النشاط وترقيمه وتصديره بأمان لـCSV، إعداد النظام، إبقاء الأوامر مراقبة فقط، وعزل أدوار الخدمات.
+
+#### tests/test_event_attribution.py
+
+يتحقق من حفظ تاريخ IP حسب وقت الحدث، idempotency عند إعادة الإرسال، عدم تخمين جهاز عندما يتشارك جهازان IP، إغلاق فترة IP القديمة، ورفض العنوان والوقت غير الصالحين. IP قرينة إسناد وليس هوية شخص.
+
+#### tests/test_platform_monitoring.py
+
+يغطي telemetry متعددة الأنظمة، نطاق وهوية مجلد Linux، ترحيل SQLite قديم، عدم اتباع symlink، عدم اختراع حذف بعد فحص جزئي، حدود polling وHTTPS الافتراضي، وعدم تنفيذ أمر Windows غير المدعوم على Linux.
+
+#### tests/test_recovery_api.py
+
+يتحقق من مصادقة Recovery والهوية والتكرار، ربط حالات الصحة بالكونسول، رفض دفعة غير سليمة قبل أي كتابة، فصل Recovery عن هوية monitor agent، ورفض status غير قانوني.
+
+#### tests/test_uploads.py
+
+يغطي إيقاف الرفع، المصادقة وCSRF، حالة pending ثم approve/reject والتنزيل، منع تنزيل المرفوض أو الفاسد، وتنظيف الملف والصف عند إدخال غير صالح.
+
+#### tests/recovery-engine/FileGuard.Recovery.Tests.csproj
+
+تعريف مشروع اختبارات محرك C# وربطه بالمصدر. يستخدم dotnet؛ ليس خدمة production.
+
+#### tests/recovery-engine/Program.cs
+
+اختبارات داخل مجلدات مؤقتة: حفظ نسختين واسترجاع hash مطابق، استمرار manifest وحد الاستعادة بعد restart، رفض blob تالف، حفظ تعارض الاسم وعدم overwrite، وضع مراقبة فقط، تفعيل صريح بعد restart، الإيقاف عند فقد جذر البيانات، تعليق ملف أكبر من الحد، رفض المجلدات المتداخلة، ومنع تشغيل محركين على الحالة نفسها. اقرأ كل حالة لفهم قرارات الحماية قبل تعديلها.
+
+#### tests/Test-DockerDiscovery.ps1 وtests/Test-LocalPermissions.ps1
+
+الأول يفحص اكتشاف أدوات Docker المحلية، والثاني يفحص أذونات محلية لسياق المعمل. لا يثبتان صحة صلاحيات مشاركة حيّة أو كل مستخدمي الدومين.
+
+#### scripts/test_ui.py
+
+مساعد فحص لمسار واجهة محلي عند توفر بيئة التشغيل؛ لا يغطي بصريًا كل متصفح أو حجم شاشة.
+
+## 26. ملفات النشر والإعداد
+
+#### ملفات Compose في جذر المشروع
+
+docker-compose.yml يحدد تشغيل الـstack العام. compose.local.yml يخصص التطوير المحلي، compose.local-lan.yml يضيف إتاحة LAN، وcompose.production.yml يصف بوابة HTTPS وخيارات الإنتاج. اقرأ services وports وvolumes وhealthchecks وترتيب overrides قبل التشغيل. Docker لا يطبق Share/NTFS ACL.
+
+#### صور الويب والبوابة
+
+Dockerfile يبني Python backend. deploy/containers/Dockerfile.frontend يبني React، وDockerfile.frontend.runtime يحدد runtime أخف. nginx.conf يقدم الملفات الثابتة ويمرر API ويضيف headers. Caddyfile وCaddyfile.local إعدادا بوابة HTTPS لسيناريوهين؛ وجودهما لا يعني أن Caddy مطلوب لاتصال LAN المباشر أو أن شهادته موثوقة تلقائيًا.
+
+#### ملفات deploy/local
+
+Docker-Tools.ps1 يفحص أدوات Docker، Enable-LanAgents.ps1 يساعد في إعداد اتصال Agents داخل الشبكة، Install-ThisPC.ps1 يجهز تثبيت الجهاز المحلي، Local-Permissions.ps1 يتعامل مع أذونات مجلد محلي للمعمل، وShow-Login.ps1 يعرض معلومات دخول التشغيل المحلي. اقرأ كل سكربت وحدد إن كان يقرأ فقط أم يكتب أو ينشئ مهمة.
+
+#### ملفات deploy/windows
+
+Install-Console.ps1 يجهز ملفات وبيئة Python وقاعدة البيانات ومهام الكونسول على Windows. Start-ConsoleProcess.ps1 يبدأ runtime، وrun_runtime.py يربط Flask بقاعدة البيانات ويستخدم TLS عند إعطائه الشهادة والمفتاح. Enable-DirectHttps.ps1 ينقل تثبيتًا قائمًا إلى HTTPS مباشر مع نسخة احتياطية وفحص healthz.
+
+issue_server_certificate.py ينشئ شهادة خادم من CA موجودة؛ المفتاح الخاص يظل على الخادم. Start-HospitalSetup.ps1 يشغل رحلة إعداد المؤسسة، وTest-HospitalReadiness.ps1 يفحص الجاهزية. HOSPITAL_SETUP.md يشرح الإعداد؛ hospital-profile.example.json وhospital-shares.example.csv قوالب وليست بيانات حية.
+
+schema.mysql.sql هو مخطط MySQL. ملفات mysql/create-database.sql وinspect.sql وWORKBENCH.md تساعد في إنشاء وفحص قاعدة بيانات؛ لا تنفذها على قاعدة حية قبل تحديد الخادم والاسم والنسخة.
+
+#### أدوات التشغيل والشبكة
+
+ScanNetwork.ps1 وScanNetworkCorrect.ps1 وScanNetworkSimple.ps1 نسخ لأدوات اكتشاف أجهزة/شبكة؛ لا تفحص نطاقًا دون إذن وتحديد واضح للعناوين. Start-Local.ps1 وStart-Local.bat يبدأان الوضع المحلي، Start-Console-Only.bat يبدأ الكونسول فقط، وStop-Local.ps1 وStop-Local.bat يوقفان التشغيل. هذه أغلفة، أما تفاصيل الخدمات فتوجد في Compose وREADME.
+
+## 27. الوثائق والتقارير ملفًا ملفًا
+
+docs/ARCHITECTURE.md يشرح الخدمات وحدودها. DOMAIN-PILOT-NO-DELETE.md خطة توزيع Agent ومشاركة تجريبية مع فصل المراقبة عن ACL. FILESERVER-VM-PILOT.md يشرح خادم الملفات وVM الكونسول وPilot. FILESHARE-EVENT-ATTRIBUTION.md يشرح مصادر أحداث SMB وربط IP والأجهزة. LOCAL-PC.md وLOCAL-WINDOWS.md يشرحان التشغيل المحلي وربط الأجهزة. MANUAL-RECOVERY-PILOT.md يشرح تجربة Recovery اليدوية.
+
+docs/MICROSERVICES.md يصف أدوار الحاويات؛ أسماء الحاويات لا تعني وحدها خدمات مستقلة في ملكية الكود. PROJECT-PLAN.md مقترح وخارطة وليس إثباتًا لتنفيذ كل ميزة. REFERENCE-PROJECT-REVIEW.md يقارن المشروع المرجعي بالفجوات والاتجاه البصري. ROADMAP.md يوضح ما تم وما تبقى. VALIDATION.md سجل تحقق بتاريخ معين فقط. WINDOWS_DEPLOYMENT.md نشر Windows VM والشهادات والشبكة. WORKBENCH.md توجيه MySQL Workbench. docs/screenshots/recovery.png لقطة مرجعية وليست واجهة.
+
+تقارير الجذر تسجل حالات مختلفة: تقرير النشر، جرد الميزات، تقرير التنفيذ، دليل التشغيل والاختبار الأسبوعي، تقرير ما قبل النشر، التقرير العام وخطة هندسة المرجع. اقرأ عنوان كل وثيقة وتاريخها وحالتها: اقتراح أو سجل فحص أو تقرير. README.md نقطة بدء المطور. pyproject.toml يضبط lint/pytest؛ requirements.txt وrequirements.container.txt يحددان اعتماد Python. .env.example قالب إعداد، أما .env فقد يحوي أسرارًا ولا تدخل قيمه في Git أو PDF.
+
+## 28. فهم ملفات البناء والفهرس الكامل
+
+البحث في الموقع يتيح إيجاد كل ملف وفتح بطاقته. ملفات المصدر عادة py وps1 وcs وtsx وcss والوثائق والإعدادات. ملفات bin تحتوي برنامج .NET المترجم واعتماداته، وobj ملفات وسيطة، وapps/console/dist ناتج React. لا تعدلها يدويًا؛ عدل المصدر وأعد البناء. tmp/pdfs صور ومعاينات قديمة. output/packages حزم تسليم، ويجب فحصها قبل توزيعها.
+
+node_modules اعتمادات npm التي يحدد package-lock إصداراتها؛ آلاف ملفاتها كود طرف ثالث وليست FileGuard. كذلك .local وذاكرات pytest وruff أدوات محلية. كل واحد من ملفات اللقطة الـ631 له بطاقة بالاسم والوظيفة في فهرس الموقع؛ المخرجات الثنائية موضحة فرديًا، بينما المنطق البرمجي مشروح في الفصول أعلاه.
+
+## 29. رحلة Recovery من البداية إلى النهاية
+
+1. Program.cs يقرأ إعداد التشغيل ويحدد هوية Recovery المنفصلة.
+2. RecoveryEngine يرفض جذر القرص وتداخل protected/repository/state والروابط الرمزية، ثم يفتح قفلًا يمنع نسخة ثانية.
+3. Scan يجتاز protected root كاملًا. لا يعد الملف محذوفًا إذا لم يكتمل المرور.
+4. Capture ينتظر استقرار الحجم والوقت، يطبق حد الملف، يحسب SHA-256 ويحفظ blob وmanifest.
+5. عند غياب ملف محفوظ، يسجل delete_observed إذا AutoRestore مطفأة. إذا فعّلها مشغل معمل صريحًا، يتحقق من النسخة والمسار والوجهة ومعدل الاستعادة قبل الكتابة دون overwrite.
+6. Emit يحفظ audit/outbox محليًا؛ Reporter يرسل الحدث لاحقًا ويحذفه بعد استلام الإقرار.
+
+الخادم يستقبل metadata للحالة، والمحتوى محفوظ محليًا. هذا الفصل لا يجعل repository محميًا من مسؤول يسيطر على الخادم ولا يحفظ كل سمات NTFS؛ يلزم تخزين منفصل وتمرين استعادة قبل الاعتماد.
+
+## 30. حدود الأمان التي يجب تذكرها أثناء قراءة المشروع
+
+- جلسة مسؤول الويب وCSRF تحميان أفعال المتصفح، بينما مفتاح Agent يعرّف جهازًا ولا يجعله مسؤولًا.
+- نطاق share يحد ما يقبله FileGuard من أحداث؛ لا يمنع Windows من تنفيذ العملية.
+- تاريخ IP يساعد في الإسناد، لكنه لا يثبت شخصًا عند اشتراك أجهزة أو حسابات.
+- سلسلة audit تكشف التعديل المعتاد، لكنها ليست تخزينًا immutable.
+- Recovery يحفظ نسخة بعد رؤيتها؛ لا يمنع الحذف قبل وقوعه ولا يستعيد كل metadata.
+- Browser/USB/Clipboard DLP غير مكتملة في هذه النسخة. ميزة upload ليست منع نقل بيانات شاملًا.
+- ملفات المثال للتوضيح. الأسرار الحقيقية في إعداد محلي محمي ولا تدخل في حزمة أو تقرير.
+
+## 31. تمرين للمبرمج المبتدئ
+
+اختر تغييرًا للعرض لا يغير سياسة الحماية: أضف وصفًا لبطاقة جهاز، ثم تتبع القيمة من console_api.py أو services.py إلى JSON ثم مكون React. سجّل اسم كل ملف ومسؤوليته، واقرأ اختبار API المتعلق بعدم تسريب مفتاح الجهاز. بعدها ابحث عن اسم الحقل في المستودع وشاهد كل موضع يكتبه وكل موضع يقرأه. لا تبدأ بتعديل ACL أو AutoRestore، لأنهما يؤثران على ملفات فعلية.
+
+<!-- FILE-CATALOG-START -->
+
+---
+
+## فهرس كامل: شرح كل مسار في لقطة المشروع
+
+هذا الملحق يسرد كل ملف باسمه ووظيفته. ملفات المصدر المهمة لها شرح تنفيذي في الفصول السابقة؛ ملفات البناء والاعتمادات موضحة حسب نوعها ومصدرها. ملفات الكاش وأدوات التطوير المحلية خارج هذه اللقطة لأنها تتغير تلقائيًا ولا تمثل كود المنتج.
+
+| المسار | المجموعة | وظيفة الملف |
+|---|---|---|
+| .codex-attachments/24420f53-feaa-4b7b-9f94-787fbc94e7b5/1207747f-45a1-41ec-b6b9-1777fe8ee5c3/NileHope-FileGuard-Final-1.zip | ملفات مرجعية مرفقة | أرشيف ZIP مرجعي أرسله المستخدم. هو حزمة ساكنة للمقارنة؛ وجوده لا يعني أن محتواه منشور أو مشغّل ضمن النسخة الحالية. |
+| .dockerignore | ملفات إعداد الجذر | قائمة استثناءات Docker build context؛ تمنع نسخ ملفات مثل البيئة المحلية والنتائج غير اللازمة إلى صورة البناء. |
+| .env | ملفات إعداد الجذر | إعدادات تشغيل محلية قد تحتوي كلمات مرور ومفاتيح. لا نعرض قيمها هنا ولا ترفعها إلى Git أو ترسلها لأحد. |
+| .env.example | ملفات إعداد الجذر | قالب بأسماء متغيرات البيئة المطلوبة مع قيم توضيحية غير سرية؛ ابدأ منه لتجهيز إعداد محلي. |
+| .github/workflows/ci.yml | ملفات إعداد الجذر | خطوات GitHub Actions لتشغيل التحقق الآلي عند تحديث المستودع؛ راجع نتائجها قبل دمج التغييرات. |
+| .gitignore | ملفات إعداد الجذر | قواعد تحدد ما لا يتتبعه Git مثل البيئات المحلية والأسرار والملفات المولدة. |
+| agents/linux/install_linux.py | agents/linux | مساعد إعداد وتشغيل Agent لينكس؛ يثبت متطلبات التشغيل ويجهز بيئة البرنامج، ولا يمنح وحده صلاحية منع الملفات. |
+| agents/linux/linux_agent.py | agents/linux | Agent مراقبة لينكس: يرسل heartbeat وصحة النظام ولقطات metadata للمسارات المختارة، مع تجنب اتباع الروابط الرمزية وقراءة محتوى الملفات. |
+| agents/windows-monitor/Deploy-FileControlGPO.ps1 | agents/windows-monitor | غلاف توافق لتشغيل محضر النشر عبر Group Policy؛ لا ينشئ سياسة المجال أو يربطها تلقائيًا. |
+| agents/windows-monitor/FileControlAgent.ps1 | agents/windows-monitor | Agent ويندوز الرئيسي: تسجيل الجهاز، مفتاحه، heartbeat، قراءة أحداث Security المحددة، وإرسال بيانات وصفية. لا يعترض عملية الحذف. |
+| agents/windows-monitor/Install-LocalAgent.bat | agents/windows-monitor | ملف تشغيل بسيط يمرر المستخدم إلى مثبت PowerShell المحلي. |
+| agents/windows-monitor/Install-LocalAgent.ps1 | agents/windows-monitor | ينسخ Agent إلى ProgramData، يضبط الوصول، ويجهز Scheduled Task؛ يتطلب إعداد عنوان الخادم والتسجيل بطريقة آمنة. |
+| agents/windows-monitor/Prepare-GPODeployment.ps1 | agents/windows-monitor | يجهز ملفات توزيع startup عبر GPO لأجهزة المجال المختارة؛ مسؤول المجال يراجع النطاق ثم يربطها. |
+| agents/windows-recovery/bin/Release/net10.0/FileGuard.Recovery.deps.json | مخرجات نشر Recovery .NET (agents/windows-recovery/bin) | بيانات اعتماد وتشغيل يقرأها مضيف .NET لمعرفة المكتبات المطلوبة وإصدار runtime. |
+| agents/windows-recovery/bin/Release/net10.0/FileGuard.Recovery.dll | مخرجات نشر Recovery .NET (agents/windows-recovery/bin) | نسخة DLL المترجمة من منطق Recovery الخاص بالمشروع؛ الناتج قابل للتشغيل فقط مع إعداداته واعتماداته، والتعديل يكون في ملفات .cs ثم إعادة البناء. |
+| agents/windows-recovery/bin/Release/net10.0/FileGuard.Recovery.exe | مخرجات نشر Recovery .NET (agents/windows-recovery/bin) | برنامج Windows مترجم/معبأ لتشغيل خدمة Recovery؛ لا تعدل الملف الناتج، ارجع إلى ملفات C# والمشروع. |
+| agents/windows-recovery/bin/Release/net10.0/FileGuard.Recovery.pdb | مخرجات نشر Recovery .NET (agents/windows-recovery/bin) | رموز تصحيح للتجميع المترجم تساعد المطور يربط stack trace بمصدر C#. |
+| agents/windows-recovery/bin/Release/net10.0/FileGuard.Recovery.runtimeconfig.json | مخرجات نشر Recovery .NET (agents/windows-recovery/bin) | بيانات اعتماد وتشغيل يقرأها مضيف .NET لمعرفة المكتبات المطلوبة وإصدار runtime. |
+| agents/windows-recovery/bin/Release/net10.0/Microsoft.Extensions.Hosting.WindowsServices.dll | مخرجات نشر Recovery .NET (agents/windows-recovery/bin) | مكتبة امتداد .NET (Hosting WindowsServices) لخدمات مثل الاستضافة أو الإعداد أو التسجيل أو الحقن؛ ملف runtime مجمّع، وليس مصدر FileGuard. |
+| agents/windows-recovery/bin/Release/net10.0/runtimes/win/lib/net10.0/System.ServiceProcess.ServiceController.dll | مخرجات نشر Recovery .NET (agents/windows-recovery/bin) | مكتبة قياسية من .NET 10 لعائلة ServiceProcess ServiceController؛ توفر API runtime للتطبيق، ولا تعدل يدويًا. |
+| agents/windows-recovery/bin/Release/net10.0/System.ServiceProcess.ServiceController.dll | مخرجات نشر Recovery .NET (agents/windows-recovery/bin) | مكتبة قياسية من .NET 10 لعائلة ServiceProcess ServiceController؛ توفر API runtime للتطبيق، ولا تعدل يدويًا. |
+| agents/windows-recovery/bin/Release/net10.0/win-x64/aspnetcorev2_inprocess.dll | مخرجات نشر Recovery .NET (agents/windows-recovery/bin) | مكتبة ثنائية ضمن نشر/اختبار .NET 10 باسم aspnetcorev2_inprocess؛ وظيفتها تنتمي إلى runtime أو dependency محدد بالاسم، ولا تُحرر يدويًا. |
+| agents/windows-recovery/bin/Release/net10.0/win-x64/clretwrc.dll | مخرجات نشر Recovery .NET (agents/windows-recovery/bin) | مكتبة ثنائية ضمن نشر/اختبار .NET 10 باسم clretwrc؛ وظيفتها تنتمي إلى runtime أو dependency محدد بالاسم، ولا تُحرر يدويًا. |
+| agents/windows-recovery/bin/Release/net10.0/win-x64/clrgc.dll | مخرجات نشر Recovery .NET (agents/windows-recovery/bin) | مكتبة ثنائية ضمن نشر/اختبار .NET 10 باسم clrgc؛ وظيفتها تنتمي إلى runtime أو dependency محدد بالاسم، ولا تُحرر يدويًا. |
+| agents/windows-recovery/bin/Release/net10.0/win-x64/clrgcexp.dll | مخرجات نشر Recovery .NET (agents/windows-recovery/bin) | مكتبة ثنائية ضمن نشر/اختبار .NET 10 باسم clrgcexp؛ وظيفتها تنتمي إلى runtime أو dependency محدد بالاسم، ولا تُحرر يدويًا. |
+| agents/windows-recovery/bin/Release/net10.0/win-x64/clrjit.dll | مخرجات نشر Recovery .NET (agents/windows-recovery/bin) | مكوّن runtime الذي يشغل .NET أو يحول IL إلى كود آلة؛ ملف منصة مرفق بالنشر. |
+| agents/windows-recovery/bin/Release/net10.0/win-x64/coreclr.dll | مخرجات نشر Recovery .NET (agents/windows-recovery/bin) | مكوّن runtime الذي يشغل .NET أو يحول IL إلى كود آلة؛ ملف منصة مرفق بالنشر. |
+| agents/windows-recovery/bin/Release/net10.0/win-x64/createdump.exe | مخرجات نشر Recovery .NET (agents/windows-recovery/bin) | برنامج Windows مترجم/معبأ لتشغيل خدمة Recovery؛ لا تعدل الملف الناتج، ارجع إلى ملفات C# والمشروع. |
+| agents/windows-recovery/bin/Release/net10.0/win-x64/FileGuard.Recovery.deps.json | مخرجات نشر Recovery .NET (agents/windows-recovery/bin) | بيانات اعتماد وتشغيل يقرأها مضيف .NET لمعرفة المكتبات المطلوبة وإصدار runtime. |
+| agents/windows-recovery/bin/Release/net10.0/win-x64/FileGuard.Recovery.dll | مخرجات نشر Recovery .NET (agents/windows-recovery/bin) | نسخة DLL المترجمة من منطق Recovery الخاص بالمشروع؛ الناتج قابل للتشغيل فقط مع إعداداته واعتماداته، والتعديل يكون في ملفات .cs ثم إعادة البناء. |
+| agents/windows-recovery/bin/Release/net10.0/win-x64/FileGuard.Recovery.exe | مخرجات نشر Recovery .NET (agents/windows-recovery/bin) | برنامج Windows مترجم/معبأ لتشغيل خدمة Recovery؛ لا تعدل الملف الناتج، ارجع إلى ملفات C# والمشروع. |
+| agents/windows-recovery/bin/Release/net10.0/win-x64/FileGuard.Recovery.pdb | مخرجات نشر Recovery .NET (agents/windows-recovery/bin) | رموز تصحيح للتجميع المترجم تساعد المطور يربط stack trace بمصدر C#. |
+| agents/windows-recovery/bin/Release/net10.0/win-x64/FileGuard.Recovery.runtimeconfig.json | مخرجات نشر Recovery .NET (agents/windows-recovery/bin) | بيانات اعتماد وتشغيل يقرأها مضيف .NET لمعرفة المكتبات المطلوبة وإصدار runtime. |
+| agents/windows-recovery/bin/Release/net10.0/win-x64/hostfxr.dll | مخرجات نشر Recovery .NET (agents/windows-recovery/bin) | مكتبة استضافة .NET تختار runtime/تبدأ التطبيق المنشور؛ ملف تشغيل مولّد. |
+| agents/windows-recovery/bin/Release/net10.0/win-x64/hostpolicy.dll | مخرجات نشر Recovery .NET (agents/windows-recovery/bin) | مكتبة استضافة .NET تختار runtime/تبدأ التطبيق المنشور؛ ملف تشغيل مولّد. |
+| agents/windows-recovery/bin/Release/net10.0/win-x64/Microsoft.AspNetCore.Antiforgery.dll | مخرجات نشر Recovery .NET (agents/windows-recovery/bin) | مكتبة framework الخاصة بـ ASP.NET Core (Antiforgery) المرفقة مع .NET 10 self-contained publish؛ اعتماد Runtime، وليست منطق FileGuard الذي تعدله. |
+| agents/windows-recovery/bin/Release/net10.0/win-x64/Microsoft.AspNetCore.Authentication.Abstractions.dll | مخرجات نشر Recovery .NET (agents/windows-recovery/bin) | مكتبة framework الخاصة بـ ASP.NET Core (Authentication Abstractions) المرفقة مع .NET 10 self-contained publish؛ اعتماد Runtime، وليست منطق FileGuard الذي تعدله. |
+| agents/windows-recovery/bin/Release/net10.0/win-x64/Microsoft.AspNetCore.Authentication.BearerToken.dll | مخرجات نشر Recovery .NET (agents/windows-recovery/bin) | مكتبة framework الخاصة بـ ASP.NET Core (Authentication BearerToken) المرفقة مع .NET 10 self-contained publish؛ اعتماد Runtime، وليست منطق FileGuard الذي تعدله. |
+| agents/windows-recovery/bin/Release/net10.0/win-x64/Microsoft.AspNetCore.Authentication.Cookies.dll | مخرجات نشر Recovery .NET (agents/windows-recovery/bin) | مكتبة framework الخاصة بـ ASP.NET Core (Authentication Cookies) المرفقة مع .NET 10 self-contained publish؛ اعتماد Runtime، وليست منطق FileGuard الذي تعدله. |
+| agents/windows-recovery/bin/Release/net10.0/win-x64/Microsoft.AspNetCore.Authentication.Core.dll | مخرجات نشر Recovery .NET (agents/windows-recovery/bin) | مكتبة framework الخاصة بـ ASP.NET Core (Authentication Core) المرفقة مع .NET 10 self-contained publish؛ اعتماد Runtime، وليست منطق FileGuard الذي تعدله. |
+| agents/windows-recovery/bin/Release/net10.0/win-x64/Microsoft.AspNetCore.Authentication.dll | مخرجات نشر Recovery .NET (agents/windows-recovery/bin) | مكتبة framework الخاصة بـ ASP.NET Core (Authentication) المرفقة مع .NET 10 self-contained publish؛ اعتماد Runtime، وليست منطق FileGuard الذي تعدله. |
+| agents/windows-recovery/bin/Release/net10.0/win-x64/Microsoft.AspNetCore.Authentication.OAuth.dll | مخرجات نشر Recovery .NET (agents/windows-recovery/bin) | مكتبة framework الخاصة بـ ASP.NET Core (Authentication OAuth) المرفقة مع .NET 10 self-contained publish؛ اعتماد Runtime، وليست منطق FileGuard الذي تعدله. |
+| agents/windows-recovery/bin/Release/net10.0/win-x64/Microsoft.AspNetCore.Authorization.dll | مخرجات نشر Recovery .NET (agents/windows-recovery/bin) | مكتبة framework الخاصة بـ ASP.NET Core (Authorization) المرفقة مع .NET 10 self-contained publish؛ اعتماد Runtime، وليست منطق FileGuard الذي تعدله. |
+| agents/windows-recovery/bin/Release/net10.0/win-x64/Microsoft.AspNetCore.Authorization.Policy.dll | مخرجات نشر Recovery .NET (agents/windows-recovery/bin) | مكتبة framework الخاصة بـ ASP.NET Core (Authorization Policy) المرفقة مع .NET 10 self-contained publish؛ اعتماد Runtime، وليست منطق FileGuard الذي تعدله. |
+| agents/windows-recovery/bin/Release/net10.0/win-x64/Microsoft.AspNetCore.Components.Authorization.dll | مخرجات نشر Recovery .NET (agents/windows-recovery/bin) | مكتبة framework الخاصة بـ ASP.NET Core (Components Authorization) المرفقة مع .NET 10 self-contained publish؛ اعتماد Runtime، وليست منطق FileGuard الذي تعدله. |
+| agents/windows-recovery/bin/Release/net10.0/win-x64/Microsoft.AspNetCore.Components.dll | مخرجات نشر Recovery .NET (agents/windows-recovery/bin) | مكتبة framework الخاصة بـ ASP.NET Core (Components) المرفقة مع .NET 10 self-contained publish؛ اعتماد Runtime، وليست منطق FileGuard الذي تعدله. |
+| agents/windows-recovery/bin/Release/net10.0/win-x64/Microsoft.AspNetCore.Components.Endpoints.dll | مخرجات نشر Recovery .NET (agents/windows-recovery/bin) | مكتبة framework الخاصة بـ ASP.NET Core (Components Endpoints) المرفقة مع .NET 10 self-contained publish؛ اعتماد Runtime، وليست منطق FileGuard الذي تعدله. |
+| agents/windows-recovery/bin/Release/net10.0/win-x64/Microsoft.AspNetCore.Components.Forms.dll | مخرجات نشر Recovery .NET (agents/windows-recovery/bin) | مكتبة framework الخاصة بـ ASP.NET Core (Components Forms) المرفقة مع .NET 10 self-contained publish؛ اعتماد Runtime، وليست منطق FileGuard الذي تعدله. |
+| agents/windows-recovery/bin/Release/net10.0/win-x64/Microsoft.AspNetCore.Components.Server.dll | مخرجات نشر Recovery .NET (agents/windows-recovery/bin) | مكتبة framework الخاصة بـ ASP.NET Core (Components Server) المرفقة مع .NET 10 self-contained publish؛ اعتماد Runtime، وليست منطق FileGuard الذي تعدله. |
+| agents/windows-recovery/bin/Release/net10.0/win-x64/Microsoft.AspNetCore.Components.Web.dll | مخرجات نشر Recovery .NET (agents/windows-recovery/bin) | مكتبة framework الخاصة بـ ASP.NET Core (Components Web) المرفقة مع .NET 10 self-contained publish؛ اعتماد Runtime، وليست منطق FileGuard الذي تعدله. |
+| agents/windows-recovery/bin/Release/net10.0/win-x64/Microsoft.AspNetCore.Connections.Abstractions.dll | مخرجات نشر Recovery .NET (agents/windows-recovery/bin) | مكتبة framework الخاصة بـ ASP.NET Core (Connections Abstractions) المرفقة مع .NET 10 self-contained publish؛ اعتماد Runtime، وليست منطق FileGuard الذي تعدله. |
+| agents/windows-recovery/bin/Release/net10.0/win-x64/Microsoft.AspNetCore.CookiePolicy.dll | مخرجات نشر Recovery .NET (agents/windows-recovery/bin) | مكتبة framework الخاصة بـ ASP.NET Core (CookiePolicy) المرفقة مع .NET 10 self-contained publish؛ اعتماد Runtime، وليست منطق FileGuard الذي تعدله. |
+| agents/windows-recovery/bin/Release/net10.0/win-x64/Microsoft.AspNetCore.Cors.dll | مخرجات نشر Recovery .NET (agents/windows-recovery/bin) | مكتبة framework الخاصة بـ ASP.NET Core (Cors) المرفقة مع .NET 10 self-contained publish؛ اعتماد Runtime، وليست منطق FileGuard الذي تعدله. |
+| agents/windows-recovery/bin/Release/net10.0/win-x64/Microsoft.AspNetCore.Cryptography.Internal.dll | مخرجات نشر Recovery .NET (agents/windows-recovery/bin) | مكتبة framework الخاصة بـ ASP.NET Core (Cryptography Internal) المرفقة مع .NET 10 self-contained publish؛ اعتماد Runtime، وليست منطق FileGuard الذي تعدله. |
+| agents/windows-recovery/bin/Release/net10.0/win-x64/Microsoft.AspNetCore.Cryptography.KeyDerivation.dll | مخرجات نشر Recovery .NET (agents/windows-recovery/bin) | مكتبة framework الخاصة بـ ASP.NET Core (Cryptography KeyDerivation) المرفقة مع .NET 10 self-contained publish؛ اعتماد Runtime، وليست منطق FileGuard الذي تعدله. |
+| agents/windows-recovery/bin/Release/net10.0/win-x64/Microsoft.AspNetCore.DataProtection.Abstractions.dll | مخرجات نشر Recovery .NET (agents/windows-recovery/bin) | مكتبة framework الخاصة بـ ASP.NET Core (DataProtection Abstractions) المرفقة مع .NET 10 self-contained publish؛ اعتماد Runtime، وليست منطق FileGuard الذي تعدله. |
+| agents/windows-recovery/bin/Release/net10.0/win-x64/Microsoft.AspNetCore.DataProtection.dll | مخرجات نشر Recovery .NET (agents/windows-recovery/bin) | مكتبة framework الخاصة بـ ASP.NET Core (DataProtection) المرفقة مع .NET 10 self-contained publish؛ اعتماد Runtime، وليست منطق FileGuard الذي تعدله. |
+| agents/windows-recovery/bin/Release/net10.0/win-x64/Microsoft.AspNetCore.DataProtection.Extensions.dll | مخرجات نشر Recovery .NET (agents/windows-recovery/bin) | مكتبة framework الخاصة بـ ASP.NET Core (DataProtection Extensions) المرفقة مع .NET 10 self-contained publish؛ اعتماد Runtime، وليست منطق FileGuard الذي تعدله. |
+| agents/windows-recovery/bin/Release/net10.0/win-x64/Microsoft.AspNetCore.Diagnostics.Abstractions.dll | مخرجات نشر Recovery .NET (agents/windows-recovery/bin) | مكتبة framework الخاصة بـ ASP.NET Core (Diagnostics Abstractions) المرفقة مع .NET 10 self-contained publish؛ اعتماد Runtime، وليست منطق FileGuard الذي تعدله. |
+| agents/windows-recovery/bin/Release/net10.0/win-x64/Microsoft.AspNetCore.Diagnostics.dll | مخرجات نشر Recovery .NET (agents/windows-recovery/bin) | مكتبة framework الخاصة بـ ASP.NET Core (Diagnostics) المرفقة مع .NET 10 self-contained publish؛ اعتماد Runtime، وليست منطق FileGuard الذي تعدله. |
+| agents/windows-recovery/bin/Release/net10.0/win-x64/Microsoft.AspNetCore.Diagnostics.HealthChecks.dll | مخرجات نشر Recovery .NET (agents/windows-recovery/bin) | مكتبة framework الخاصة بـ ASP.NET Core (Diagnostics HealthChecks) المرفقة مع .NET 10 self-contained publish؛ اعتماد Runtime، وليست منطق FileGuard الذي تعدله. |
+| agents/windows-recovery/bin/Release/net10.0/win-x64/Microsoft.AspNetCore.dll | مخرجات نشر Recovery .NET (agents/windows-recovery/bin) | مكتبة framework الخاصة بـ ASP.NET Core (Microsoft AspNetCore) المرفقة مع .NET 10 self-contained publish؛ اعتماد Runtime، وليست منطق FileGuard الذي تعدله. |
+| agents/windows-recovery/bin/Release/net10.0/win-x64/Microsoft.AspNetCore.HostFiltering.dll | مخرجات نشر Recovery .NET (agents/windows-recovery/bin) | مكتبة framework الخاصة بـ ASP.NET Core (HostFiltering) المرفقة مع .NET 10 self-contained publish؛ اعتماد Runtime، وليست منطق FileGuard الذي تعدله. |
+| agents/windows-recovery/bin/Release/net10.0/win-x64/Microsoft.AspNetCore.Hosting.Abstractions.dll | مخرجات نشر Recovery .NET (agents/windows-recovery/bin) | مكتبة framework الخاصة بـ ASP.NET Core (Hosting Abstractions) المرفقة مع .NET 10 self-contained publish؛ اعتماد Runtime، وليست منطق FileGuard الذي تعدله. |
+| agents/windows-recovery/bin/Release/net10.0/win-x64/Microsoft.AspNetCore.Hosting.dll | مخرجات نشر Recovery .NET (agents/windows-recovery/bin) | مكتبة framework الخاصة بـ ASP.NET Core (Hosting) المرفقة مع .NET 10 self-contained publish؛ اعتماد Runtime، وليست منطق FileGuard الذي تعدله. |
+| agents/windows-recovery/bin/Release/net10.0/win-x64/Microsoft.AspNetCore.Hosting.Server.Abstractions.dll | مخرجات نشر Recovery .NET (agents/windows-recovery/bin) | مكتبة framework الخاصة بـ ASP.NET Core (Hosting Server Abstractions) المرفقة مع .NET 10 self-contained publish؛ اعتماد Runtime، وليست منطق FileGuard الذي تعدله. |
+| agents/windows-recovery/bin/Release/net10.0/win-x64/Microsoft.AspNetCore.Html.Abstractions.dll | مخرجات نشر Recovery .NET (agents/windows-recovery/bin) | مكتبة framework الخاصة بـ ASP.NET Core (Html Abstractions) المرفقة مع .NET 10 self-contained publish؛ اعتماد Runtime، وليست منطق FileGuard الذي تعدله. |
+| agents/windows-recovery/bin/Release/net10.0/win-x64/Microsoft.AspNetCore.Http.Abstractions.dll | مخرجات نشر Recovery .NET (agents/windows-recovery/bin) | مكتبة framework الخاصة بـ ASP.NET Core (Http Abstractions) المرفقة مع .NET 10 self-contained publish؛ اعتماد Runtime، وليست منطق FileGuard الذي تعدله. |
+| agents/windows-recovery/bin/Release/net10.0/win-x64/Microsoft.AspNetCore.Http.Connections.Common.dll | مخرجات نشر Recovery .NET (agents/windows-recovery/bin) | مكتبة framework الخاصة بـ ASP.NET Core (Http Connections Common) المرفقة مع .NET 10 self-contained publish؛ اعتماد Runtime، وليست منطق FileGuard الذي تعدله. |
+| agents/windows-recovery/bin/Release/net10.0/win-x64/Microsoft.AspNetCore.Http.Connections.dll | مخرجات نشر Recovery .NET (agents/windows-recovery/bin) | مكتبة framework الخاصة بـ ASP.NET Core (Http Connections) المرفقة مع .NET 10 self-contained publish؛ اعتماد Runtime، وليست منطق FileGuard الذي تعدله. |
+| agents/windows-recovery/bin/Release/net10.0/win-x64/Microsoft.AspNetCore.Http.dll | مخرجات نشر Recovery .NET (agents/windows-recovery/bin) | مكتبة framework الخاصة بـ ASP.NET Core (Http) المرفقة مع .NET 10 self-contained publish؛ اعتماد Runtime، وليست منطق FileGuard الذي تعدله. |
+| agents/windows-recovery/bin/Release/net10.0/win-x64/Microsoft.AspNetCore.Http.Extensions.dll | مخرجات نشر Recovery .NET (agents/windows-recovery/bin) | مكتبة framework الخاصة بـ ASP.NET Core (Http Extensions) المرفقة مع .NET 10 self-contained publish؛ اعتماد Runtime، وليست منطق FileGuard الذي تعدله. |
+| agents/windows-recovery/bin/Release/net10.0/win-x64/Microsoft.AspNetCore.Http.Features.dll | مخرجات نشر Recovery .NET (agents/windows-recovery/bin) | مكتبة framework الخاصة بـ ASP.NET Core (Http Features) المرفقة مع .NET 10 self-contained publish؛ اعتماد Runtime، وليست منطق FileGuard الذي تعدله. |
+| agents/windows-recovery/bin/Release/net10.0/win-x64/Microsoft.AspNetCore.Http.Results.dll | مخرجات نشر Recovery .NET (agents/windows-recovery/bin) | مكتبة framework الخاصة بـ ASP.NET Core (Http Results) المرفقة مع .NET 10 self-contained publish؛ اعتماد Runtime، وليست منطق FileGuard الذي تعدله. |
+| agents/windows-recovery/bin/Release/net10.0/win-x64/Microsoft.AspNetCore.HttpLogging.dll | مخرجات نشر Recovery .NET (agents/windows-recovery/bin) | مكتبة framework الخاصة بـ ASP.NET Core (HttpLogging) المرفقة مع .NET 10 self-contained publish؛ اعتماد Runtime، وليست منطق FileGuard الذي تعدله. |
+| agents/windows-recovery/bin/Release/net10.0/win-x64/Microsoft.AspNetCore.HttpOverrides.dll | مخرجات نشر Recovery .NET (agents/windows-recovery/bin) | مكتبة framework الخاصة بـ ASP.NET Core (HttpOverrides) المرفقة مع .NET 10 self-contained publish؛ اعتماد Runtime، وليست منطق FileGuard الذي تعدله. |
+| agents/windows-recovery/bin/Release/net10.0/win-x64/Microsoft.AspNetCore.HttpsPolicy.dll | مخرجات نشر Recovery .NET (agents/windows-recovery/bin) | مكتبة framework الخاصة بـ ASP.NET Core (HttpsPolicy) المرفقة مع .NET 10 self-contained publish؛ اعتماد Runtime، وليست منطق FileGuard الذي تعدله. |
+| agents/windows-recovery/bin/Release/net10.0/win-x64/Microsoft.AspNetCore.Identity.dll | مخرجات نشر Recovery .NET (agents/windows-recovery/bin) | مكتبة framework الخاصة بـ ASP.NET Core (Identity) المرفقة مع .NET 10 self-contained publish؛ اعتماد Runtime، وليست منطق FileGuard الذي تعدله. |
+| agents/windows-recovery/bin/Release/net10.0/win-x64/Microsoft.AspNetCore.Localization.dll | مخرجات نشر Recovery .NET (agents/windows-recovery/bin) | مكتبة framework الخاصة بـ ASP.NET Core (Localization) المرفقة مع .NET 10 self-contained publish؛ اعتماد Runtime، وليست منطق FileGuard الذي تعدله. |
+| agents/windows-recovery/bin/Release/net10.0/win-x64/Microsoft.AspNetCore.Localization.Routing.dll | مخرجات نشر Recovery .NET (agents/windows-recovery/bin) | مكتبة framework الخاصة بـ ASP.NET Core (Localization Routing) المرفقة مع .NET 10 self-contained publish؛ اعتماد Runtime، وليست منطق FileGuard الذي تعدله. |
+| agents/windows-recovery/bin/Release/net10.0/win-x64/Microsoft.AspNetCore.Metadata.dll | مخرجات نشر Recovery .NET (agents/windows-recovery/bin) | مكتبة framework الخاصة بـ ASP.NET Core (Metadata) المرفقة مع .NET 10 self-contained publish؛ اعتماد Runtime، وليست منطق FileGuard الذي تعدله. |
+| agents/windows-recovery/bin/Release/net10.0/win-x64/Microsoft.AspNetCore.Mvc.Abstractions.dll | مخرجات نشر Recovery .NET (agents/windows-recovery/bin) | مكتبة framework الخاصة بـ ASP.NET Core (Mvc Abstractions) المرفقة مع .NET 10 self-contained publish؛ اعتماد Runtime، وليست منطق FileGuard الذي تعدله. |
+| agents/windows-recovery/bin/Release/net10.0/win-x64/Microsoft.AspNetCore.Mvc.ApiExplorer.dll | مخرجات نشر Recovery .NET (agents/windows-recovery/bin) | مكتبة framework الخاصة بـ ASP.NET Core (Mvc ApiExplorer) المرفقة مع .NET 10 self-contained publish؛ اعتماد Runtime، وليست منطق FileGuard الذي تعدله. |
+| agents/windows-recovery/bin/Release/net10.0/win-x64/Microsoft.AspNetCore.Mvc.Core.dll | مخرجات نشر Recovery .NET (agents/windows-recovery/bin) | مكتبة framework الخاصة بـ ASP.NET Core (Mvc Core) المرفقة مع .NET 10 self-contained publish؛ اعتماد Runtime، وليست منطق FileGuard الذي تعدله. |
+| agents/windows-recovery/bin/Release/net10.0/win-x64/Microsoft.AspNetCore.Mvc.Cors.dll | مخرجات نشر Recovery .NET (agents/windows-recovery/bin) | مكتبة framework الخاصة بـ ASP.NET Core (Mvc Cors) المرفقة مع .NET 10 self-contained publish؛ اعتماد Runtime، وليست منطق FileGuard الذي تعدله. |
+| agents/windows-recovery/bin/Release/net10.0/win-x64/Microsoft.AspNetCore.Mvc.DataAnnotations.dll | مخرجات نشر Recovery .NET (agents/windows-recovery/bin) | مكتبة framework الخاصة بـ ASP.NET Core (Mvc DataAnnotations) المرفقة مع .NET 10 self-contained publish؛ اعتماد Runtime، وليست منطق FileGuard الذي تعدله. |
+| agents/windows-recovery/bin/Release/net10.0/win-x64/Microsoft.AspNetCore.Mvc.dll | مخرجات نشر Recovery .NET (agents/windows-recovery/bin) | مكتبة framework الخاصة بـ ASP.NET Core (Mvc) المرفقة مع .NET 10 self-contained publish؛ اعتماد Runtime، وليست منطق FileGuard الذي تعدله. |
+| agents/windows-recovery/bin/Release/net10.0/win-x64/Microsoft.AspNetCore.Mvc.Formatters.Json.dll | مخرجات نشر Recovery .NET (agents/windows-recovery/bin) | مكتبة framework الخاصة بـ ASP.NET Core (Mvc Formatters Json) المرفقة مع .NET 10 self-contained publish؛ اعتماد Runtime، وليست منطق FileGuard الذي تعدله. |
+| agents/windows-recovery/bin/Release/net10.0/win-x64/Microsoft.AspNetCore.Mvc.Formatters.Xml.dll | مخرجات نشر Recovery .NET (agents/windows-recovery/bin) | مكتبة framework الخاصة بـ ASP.NET Core (Mvc Formatters Xml) المرفقة مع .NET 10 self-contained publish؛ اعتماد Runtime، وليست منطق FileGuard الذي تعدله. |
+| agents/windows-recovery/bin/Release/net10.0/win-x64/Microsoft.AspNetCore.Mvc.Localization.dll | مخرجات نشر Recovery .NET (agents/windows-recovery/bin) | مكتبة framework الخاصة بـ ASP.NET Core (Mvc Localization) المرفقة مع .NET 10 self-contained publish؛ اعتماد Runtime، وليست منطق FileGuard الذي تعدله. |
+| agents/windows-recovery/bin/Release/net10.0/win-x64/Microsoft.AspNetCore.Mvc.Razor.dll | مخرجات نشر Recovery .NET (agents/windows-recovery/bin) | مكتبة framework الخاصة بـ ASP.NET Core (Mvc Razor) المرفقة مع .NET 10 self-contained publish؛ اعتماد Runtime، وليست منطق FileGuard الذي تعدله. |
+| agents/windows-recovery/bin/Release/net10.0/win-x64/Microsoft.AspNetCore.Mvc.RazorPages.dll | مخرجات نشر Recovery .NET (agents/windows-recovery/bin) | مكتبة framework الخاصة بـ ASP.NET Core (Mvc RazorPages) المرفقة مع .NET 10 self-contained publish؛ اعتماد Runtime، وليست منطق FileGuard الذي تعدله. |
+| agents/windows-recovery/bin/Release/net10.0/win-x64/Microsoft.AspNetCore.Mvc.TagHelpers.dll | مخرجات نشر Recovery .NET (agents/windows-recovery/bin) | مكتبة framework الخاصة بـ ASP.NET Core (Mvc TagHelpers) المرفقة مع .NET 10 self-contained publish؛ اعتماد Runtime، وليست منطق FileGuard الذي تعدله. |
+| agents/windows-recovery/bin/Release/net10.0/win-x64/Microsoft.AspNetCore.Mvc.ViewFeatures.dll | مخرجات نشر Recovery .NET (agents/windows-recovery/bin) | مكتبة framework الخاصة بـ ASP.NET Core (Mvc ViewFeatures) المرفقة مع .NET 10 self-contained publish؛ اعتماد Runtime، وليست منطق FileGuard الذي تعدله. |
+| agents/windows-recovery/bin/Release/net10.0/win-x64/Microsoft.AspNetCore.OutputCaching.dll | مخرجات نشر Recovery .NET (agents/windows-recovery/bin) | مكتبة framework الخاصة بـ ASP.NET Core (OutputCaching) المرفقة مع .NET 10 self-contained publish؛ اعتماد Runtime، وليست منطق FileGuard الذي تعدله. |
+| agents/windows-recovery/bin/Release/net10.0/win-x64/Microsoft.AspNetCore.RateLimiting.dll | مخرجات نشر Recovery .NET (agents/windows-recovery/bin) | مكتبة framework الخاصة بـ ASP.NET Core (RateLimiting) المرفقة مع .NET 10 self-contained publish؛ اعتماد Runtime، وليست منطق FileGuard الذي تعدله. |
+| agents/windows-recovery/bin/Release/net10.0/win-x64/Microsoft.AspNetCore.Razor.dll | مخرجات نشر Recovery .NET (agents/windows-recovery/bin) | مكتبة framework الخاصة بـ ASP.NET Core (Razor) المرفقة مع .NET 10 self-contained publish؛ اعتماد Runtime، وليست منطق FileGuard الذي تعدله. |
+| agents/windows-recovery/bin/Release/net10.0/win-x64/Microsoft.AspNetCore.Razor.Runtime.dll | مخرجات نشر Recovery .NET (agents/windows-recovery/bin) | مكتبة framework الخاصة بـ ASP.NET Core (Razor Runtime) المرفقة مع .NET 10 self-contained publish؛ اعتماد Runtime، وليست منطق FileGuard الذي تعدله. |
+| agents/windows-recovery/bin/Release/net10.0/win-x64/Microsoft.AspNetCore.RequestDecompression.dll | مخرجات نشر Recovery .NET (agents/windows-recovery/bin) | مكتبة framework الخاصة بـ ASP.NET Core (RequestDecompression) المرفقة مع .NET 10 self-contained publish؛ اعتماد Runtime، وليست منطق FileGuard الذي تعدله. |
+| agents/windows-recovery/bin/Release/net10.0/win-x64/Microsoft.AspNetCore.ResponseCaching.Abstractions.dll | مخرجات نشر Recovery .NET (agents/windows-recovery/bin) | مكتبة framework الخاصة بـ ASP.NET Core (ResponseCaching Abstractions) المرفقة مع .NET 10 self-contained publish؛ اعتماد Runtime، وليست منطق FileGuard الذي تعدله. |
+| agents/windows-recovery/bin/Release/net10.0/win-x64/Microsoft.AspNetCore.ResponseCaching.dll | مخرجات نشر Recovery .NET (agents/windows-recovery/bin) | مكتبة framework الخاصة بـ ASP.NET Core (ResponseCaching) المرفقة مع .NET 10 self-contained publish؛ اعتماد Runtime، وليست منطق FileGuard الذي تعدله. |
+| agents/windows-recovery/bin/Release/net10.0/win-x64/Microsoft.AspNetCore.ResponseCompression.dll | مخرجات نشر Recovery .NET (agents/windows-recovery/bin) | مكتبة framework الخاصة بـ ASP.NET Core (ResponseCompression) المرفقة مع .NET 10 self-contained publish؛ اعتماد Runtime، وليست منطق FileGuard الذي تعدله. |
+| agents/windows-recovery/bin/Release/net10.0/win-x64/Microsoft.AspNetCore.Rewrite.dll | مخرجات نشر Recovery .NET (agents/windows-recovery/bin) | مكتبة framework الخاصة بـ ASP.NET Core (Rewrite) المرفقة مع .NET 10 self-contained publish؛ اعتماد Runtime، وليست منطق FileGuard الذي تعدله. |
+| agents/windows-recovery/bin/Release/net10.0/win-x64/Microsoft.AspNetCore.Routing.Abstractions.dll | مخرجات نشر Recovery .NET (agents/windows-recovery/bin) | مكتبة framework الخاصة بـ ASP.NET Core (Routing Abstractions) المرفقة مع .NET 10 self-contained publish؛ اعتماد Runtime، وليست منطق FileGuard الذي تعدله. |
+| agents/windows-recovery/bin/Release/net10.0/win-x64/Microsoft.AspNetCore.Routing.dll | مخرجات نشر Recovery .NET (agents/windows-recovery/bin) | مكتبة framework الخاصة بـ ASP.NET Core (Routing) المرفقة مع .NET 10 self-contained publish؛ اعتماد Runtime، وليست منطق FileGuard الذي تعدله. |
+| agents/windows-recovery/bin/Release/net10.0/win-x64/Microsoft.AspNetCore.Server.HttpSys.dll | مخرجات نشر Recovery .NET (agents/windows-recovery/bin) | مكتبة framework الخاصة بـ ASP.NET Core (Server HttpSys) المرفقة مع .NET 10 self-contained publish؛ اعتماد Runtime، وليست منطق FileGuard الذي تعدله. |
+| agents/windows-recovery/bin/Release/net10.0/win-x64/Microsoft.AspNetCore.Server.IIS.dll | مخرجات نشر Recovery .NET (agents/windows-recovery/bin) | مكتبة framework الخاصة بـ ASP.NET Core (Server IIS) المرفقة مع .NET 10 self-contained publish؛ اعتماد Runtime، وليست منطق FileGuard الذي تعدله. |
+| agents/windows-recovery/bin/Release/net10.0/win-x64/Microsoft.AspNetCore.Server.IISIntegration.dll | مخرجات نشر Recovery .NET (agents/windows-recovery/bin) | مكتبة framework الخاصة بـ ASP.NET Core (Server IISIntegration) المرفقة مع .NET 10 self-contained publish؛ اعتماد Runtime، وليست منطق FileGuard الذي تعدله. |
+| agents/windows-recovery/bin/Release/net10.0/win-x64/Microsoft.AspNetCore.Server.Kestrel.Core.dll | مخرجات نشر Recovery .NET (agents/windows-recovery/bin) | مكتبة framework الخاصة بـ ASP.NET Core (Server Kestrel Core) المرفقة مع .NET 10 self-contained publish؛ اعتماد Runtime، وليست منطق FileGuard الذي تعدله. |
+| agents/windows-recovery/bin/Release/net10.0/win-x64/Microsoft.AspNetCore.Server.Kestrel.dll | مخرجات نشر Recovery .NET (agents/windows-recovery/bin) | مكتبة framework الخاصة بـ ASP.NET Core (Server Kestrel) المرفقة مع .NET 10 self-contained publish؛ اعتماد Runtime، وليست منطق FileGuard الذي تعدله. |
+| agents/windows-recovery/bin/Release/net10.0/win-x64/Microsoft.AspNetCore.Server.Kestrel.Transport.NamedPipes.dll | مخرجات نشر Recovery .NET (agents/windows-recovery/bin) | مكتبة framework الخاصة بـ ASP.NET Core (Server Kestrel Transport NamedPipes) المرفقة مع .NET 10 self-contained publish؛ اعتماد Runtime، وليست منطق FileGuard الذي تعدله. |
+| agents/windows-recovery/bin/Release/net10.0/win-x64/Microsoft.AspNetCore.Server.Kestrel.Transport.Quic.dll | مخرجات نشر Recovery .NET (agents/windows-recovery/bin) | مكتبة framework الخاصة بـ ASP.NET Core (Server Kestrel Transport Quic) المرفقة مع .NET 10 self-contained publish؛ اعتماد Runtime، وليست منطق FileGuard الذي تعدله. |
+| agents/windows-recovery/bin/Release/net10.0/win-x64/Microsoft.AspNetCore.Server.Kestrel.Transport.Sockets.dll | مخرجات نشر Recovery .NET (agents/windows-recovery/bin) | مكتبة framework الخاصة بـ ASP.NET Core (Server Kestrel Transport Sockets) المرفقة مع .NET 10 self-contained publish؛ اعتماد Runtime، وليست منطق FileGuard الذي تعدله. |
+| agents/windows-recovery/bin/Release/net10.0/win-x64/Microsoft.AspNetCore.Session.dll | مخرجات نشر Recovery .NET (agents/windows-recovery/bin) | مكتبة framework الخاصة بـ ASP.NET Core (Session) المرفقة مع .NET 10 self-contained publish؛ اعتماد Runtime، وليست منطق FileGuard الذي تعدله. |
+| agents/windows-recovery/bin/Release/net10.0/win-x64/Microsoft.AspNetCore.SignalR.Common.dll | مخرجات نشر Recovery .NET (agents/windows-recovery/bin) | مكتبة framework الخاصة بـ ASP.NET Core (SignalR Common) المرفقة مع .NET 10 self-contained publish؛ اعتماد Runtime، وليست منطق FileGuard الذي تعدله. |
+| agents/windows-recovery/bin/Release/net10.0/win-x64/Microsoft.AspNetCore.SignalR.Core.dll | مخرجات نشر Recovery .NET (agents/windows-recovery/bin) | مكتبة framework الخاصة بـ ASP.NET Core (SignalR Core) المرفقة مع .NET 10 self-contained publish؛ اعتماد Runtime، وليست منطق FileGuard الذي تعدله. |
+| agents/windows-recovery/bin/Release/net10.0/win-x64/Microsoft.AspNetCore.SignalR.dll | مخرجات نشر Recovery .NET (agents/windows-recovery/bin) | مكتبة framework الخاصة بـ ASP.NET Core (SignalR) المرفقة مع .NET 10 self-contained publish؛ اعتماد Runtime، وليست منطق FileGuard الذي تعدله. |
+| agents/windows-recovery/bin/Release/net10.0/win-x64/Microsoft.AspNetCore.SignalR.Protocols.Json.dll | مخرجات نشر Recovery .NET (agents/windows-recovery/bin) | مكتبة framework الخاصة بـ ASP.NET Core (SignalR Protocols Json) المرفقة مع .NET 10 self-contained publish؛ اعتماد Runtime، وليست منطق FileGuard الذي تعدله. |
+| agents/windows-recovery/bin/Release/net10.0/win-x64/Microsoft.AspNetCore.StaticAssets.dll | مخرجات نشر Recovery .NET (agents/windows-recovery/bin) | مكتبة framework الخاصة بـ ASP.NET Core (StaticAssets) المرفقة مع .NET 10 self-contained publish؛ اعتماد Runtime، وليست منطق FileGuard الذي تعدله. |
+| agents/windows-recovery/bin/Release/net10.0/win-x64/Microsoft.AspNetCore.StaticFiles.dll | مخرجات نشر Recovery .NET (agents/windows-recovery/bin) | مكتبة framework الخاصة بـ ASP.NET Core (StaticFiles) المرفقة مع .NET 10 self-contained publish؛ اعتماد Runtime، وليست منطق FileGuard الذي تعدله. |
+| agents/windows-recovery/bin/Release/net10.0/win-x64/Microsoft.AspNetCore.WebSockets.dll | مخرجات نشر Recovery .NET (agents/windows-recovery/bin) | مكتبة framework الخاصة بـ ASP.NET Core (WebSockets) المرفقة مع .NET 10 self-contained publish؛ اعتماد Runtime، وليست منطق FileGuard الذي تعدله. |
+| agents/windows-recovery/bin/Release/net10.0/win-x64/Microsoft.AspNetCore.WebUtilities.dll | مخرجات نشر Recovery .NET (agents/windows-recovery/bin) | مكتبة framework الخاصة بـ ASP.NET Core (WebUtilities) المرفقة مع .NET 10 self-contained publish؛ اعتماد Runtime، وليست منطق FileGuard الذي تعدله. |
+| agents/windows-recovery/bin/Release/net10.0/win-x64/Microsoft.CSharp.dll | مخرجات نشر Recovery .NET (agents/windows-recovery/bin) | مكتبة قياسية من .NET 10 لعائلة Microsoft CSharp؛ توفر API runtime للتطبيق، ولا تعدل يدويًا. |
+| agents/windows-recovery/bin/Release/net10.0/win-x64/Microsoft.DiaSymReader.Native.amd64.dll | مخرجات نشر Recovery .NET (agents/windows-recovery/bin) | مكوّن تشخيص أو تصحيح .NET يساعد أدوات runtime في قراءة معلومات العملية والرموز. |
+| agents/windows-recovery/bin/Release/net10.0/win-x64/Microsoft.Extensions.Caching.Abstractions.dll | مخرجات نشر Recovery .NET (agents/windows-recovery/bin) | مكتبة امتداد .NET (Caching Abstractions) لخدمات مثل الاستضافة أو الإعداد أو التسجيل أو الحقن؛ ملف runtime مجمّع، وليس مصدر FileGuard. |
+| agents/windows-recovery/bin/Release/net10.0/win-x64/Microsoft.Extensions.Caching.Memory.dll | مخرجات نشر Recovery .NET (agents/windows-recovery/bin) | مكتبة امتداد .NET (Caching Memory) لخدمات مثل الاستضافة أو الإعداد أو التسجيل أو الحقن؛ ملف runtime مجمّع، وليس مصدر FileGuard. |
+| agents/windows-recovery/bin/Release/net10.0/win-x64/Microsoft.Extensions.Configuration.Abstractions.dll | مخرجات نشر Recovery .NET (agents/windows-recovery/bin) | مكتبة امتداد .NET (Configuration Abstractions) لخدمات مثل الاستضافة أو الإعداد أو التسجيل أو الحقن؛ ملف runtime مجمّع، وليس مصدر FileGuard. |
+| agents/windows-recovery/bin/Release/net10.0/win-x64/Microsoft.Extensions.Configuration.Binder.dll | مخرجات نشر Recovery .NET (agents/windows-recovery/bin) | مكتبة امتداد .NET (Configuration Binder) لخدمات مثل الاستضافة أو الإعداد أو التسجيل أو الحقن؛ ملف runtime مجمّع، وليس مصدر FileGuard. |
+| agents/windows-recovery/bin/Release/net10.0/win-x64/Microsoft.Extensions.Configuration.CommandLine.dll | مخرجات نشر Recovery .NET (agents/windows-recovery/bin) | مكتبة امتداد .NET (Configuration CommandLine) لخدمات مثل الاستضافة أو الإعداد أو التسجيل أو الحقن؛ ملف runtime مجمّع، وليس مصدر FileGuard. |
+| agents/windows-recovery/bin/Release/net10.0/win-x64/Microsoft.Extensions.Configuration.dll | مخرجات نشر Recovery .NET (agents/windows-recovery/bin) | مكتبة امتداد .NET (Configuration) لخدمات مثل الاستضافة أو الإعداد أو التسجيل أو الحقن؛ ملف runtime مجمّع، وليس مصدر FileGuard. |
+| agents/windows-recovery/bin/Release/net10.0/win-x64/Microsoft.Extensions.Configuration.EnvironmentVariables.dll | مخرجات نشر Recovery .NET (agents/windows-recovery/bin) | مكتبة امتداد .NET (Configuration EnvironmentVariables) لخدمات مثل الاستضافة أو الإعداد أو التسجيل أو الحقن؛ ملف runtime مجمّع، وليس مصدر FileGuard. |
+| agents/windows-recovery/bin/Release/net10.0/win-x64/Microsoft.Extensions.Configuration.FileExtensions.dll | مخرجات نشر Recovery .NET (agents/windows-recovery/bin) | مكتبة امتداد .NET (Configuration FileExtensions) لخدمات مثل الاستضافة أو الإعداد أو التسجيل أو الحقن؛ ملف runtime مجمّع، وليس مصدر FileGuard. |
+| agents/windows-recovery/bin/Release/net10.0/win-x64/Microsoft.Extensions.Configuration.Ini.dll | مخرجات نشر Recovery .NET (agents/windows-recovery/bin) | مكتبة امتداد .NET (Configuration Ini) لخدمات مثل الاستضافة أو الإعداد أو التسجيل أو الحقن؛ ملف runtime مجمّع، وليس مصدر FileGuard. |
+| agents/windows-recovery/bin/Release/net10.0/win-x64/Microsoft.Extensions.Configuration.Json.dll | مخرجات نشر Recovery .NET (agents/windows-recovery/bin) | مكتبة امتداد .NET (Configuration Json) لخدمات مثل الاستضافة أو الإعداد أو التسجيل أو الحقن؛ ملف runtime مجمّع، وليس مصدر FileGuard. |
+| agents/windows-recovery/bin/Release/net10.0/win-x64/Microsoft.Extensions.Configuration.KeyPerFile.dll | مخرجات نشر Recovery .NET (agents/windows-recovery/bin) | مكتبة امتداد .NET (Configuration KeyPerFile) لخدمات مثل الاستضافة أو الإعداد أو التسجيل أو الحقن؛ ملف runtime مجمّع، وليس مصدر FileGuard. |
+| agents/windows-recovery/bin/Release/net10.0/win-x64/Microsoft.Extensions.Configuration.UserSecrets.dll | مخرجات نشر Recovery .NET (agents/windows-recovery/bin) | مكتبة امتداد .NET (Configuration UserSecrets) لخدمات مثل الاستضافة أو الإعداد أو التسجيل أو الحقن؛ ملف runtime مجمّع، وليس مصدر FileGuard. |
+| agents/windows-recovery/bin/Release/net10.0/win-x64/Microsoft.Extensions.Configuration.Xml.dll | مخرجات نشر Recovery .NET (agents/windows-recovery/bin) | مكتبة امتداد .NET (Configuration Xml) لخدمات مثل الاستضافة أو الإعداد أو التسجيل أو الحقن؛ ملف runtime مجمّع، وليس مصدر FileGuard. |
+| agents/windows-recovery/bin/Release/net10.0/win-x64/Microsoft.Extensions.DependencyInjection.Abstractions.dll | مخرجات نشر Recovery .NET (agents/windows-recovery/bin) | مكتبة امتداد .NET (DependencyInjection Abstractions) لخدمات مثل الاستضافة أو الإعداد أو التسجيل أو الحقن؛ ملف runtime مجمّع، وليس مصدر FileGuard. |
+| agents/windows-recovery/bin/Release/net10.0/win-x64/Microsoft.Extensions.DependencyInjection.dll | مخرجات نشر Recovery .NET (agents/windows-recovery/bin) | مكتبة امتداد .NET (DependencyInjection) لخدمات مثل الاستضافة أو الإعداد أو التسجيل أو الحقن؛ ملف runtime مجمّع، وليس مصدر FileGuard. |
+| agents/windows-recovery/bin/Release/net10.0/win-x64/Microsoft.Extensions.Diagnostics.Abstractions.dll | مخرجات نشر Recovery .NET (agents/windows-recovery/bin) | مكتبة امتداد .NET (Diagnostics Abstractions) لخدمات مثل الاستضافة أو الإعداد أو التسجيل أو الحقن؛ ملف runtime مجمّع، وليس مصدر FileGuard. |
+| agents/windows-recovery/bin/Release/net10.0/win-x64/Microsoft.Extensions.Diagnostics.dll | مخرجات نشر Recovery .NET (agents/windows-recovery/bin) | مكتبة امتداد .NET (Diagnostics) لخدمات مثل الاستضافة أو الإعداد أو التسجيل أو الحقن؛ ملف runtime مجمّع، وليس مصدر FileGuard. |
+| agents/windows-recovery/bin/Release/net10.0/win-x64/Microsoft.Extensions.Diagnostics.HealthChecks.Abstractions.dll | مخرجات نشر Recovery .NET (agents/windows-recovery/bin) | مكتبة امتداد .NET (Diagnostics HealthChecks Abstractions) لخدمات مثل الاستضافة أو الإعداد أو التسجيل أو الحقن؛ ملف runtime مجمّع، وليس مصدر FileGuard. |
+| agents/windows-recovery/bin/Release/net10.0/win-x64/Microsoft.Extensions.Diagnostics.HealthChecks.dll | مخرجات نشر Recovery .NET (agents/windows-recovery/bin) | مكتبة امتداد .NET (Diagnostics HealthChecks) لخدمات مثل الاستضافة أو الإعداد أو التسجيل أو الحقن؛ ملف runtime مجمّع، وليس مصدر FileGuard. |
+| agents/windows-recovery/bin/Release/net10.0/win-x64/Microsoft.Extensions.Features.dll | مخرجات نشر Recovery .NET (agents/windows-recovery/bin) | مكتبة امتداد .NET (Features) لخدمات مثل الاستضافة أو الإعداد أو التسجيل أو الحقن؛ ملف runtime مجمّع، وليس مصدر FileGuard. |
+| agents/windows-recovery/bin/Release/net10.0/win-x64/Microsoft.Extensions.FileProviders.Abstractions.dll | مخرجات نشر Recovery .NET (agents/windows-recovery/bin) | مكتبة امتداد .NET (FileProviders Abstractions) لخدمات مثل الاستضافة أو الإعداد أو التسجيل أو الحقن؛ ملف runtime مجمّع، وليس مصدر FileGuard. |
+| agents/windows-recovery/bin/Release/net10.0/win-x64/Microsoft.Extensions.FileProviders.Composite.dll | مخرجات نشر Recovery .NET (agents/windows-recovery/bin) | مكتبة امتداد .NET (FileProviders Composite) لخدمات مثل الاستضافة أو الإعداد أو التسجيل أو الحقن؛ ملف runtime مجمّع، وليس مصدر FileGuard. |
+| agents/windows-recovery/bin/Release/net10.0/win-x64/Microsoft.Extensions.FileProviders.Embedded.dll | مخرجات نشر Recovery .NET (agents/windows-recovery/bin) | مكتبة امتداد .NET (FileProviders Embedded) لخدمات مثل الاستضافة أو الإعداد أو التسجيل أو الحقن؛ ملف runtime مجمّع، وليس مصدر FileGuard. |
+| agents/windows-recovery/bin/Release/net10.0/win-x64/Microsoft.Extensions.FileProviders.Physical.dll | مخرجات نشر Recovery .NET (agents/windows-recovery/bin) | مكتبة امتداد .NET (FileProviders Physical) لخدمات مثل الاستضافة أو الإعداد أو التسجيل أو الحقن؛ ملف runtime مجمّع، وليس مصدر FileGuard. |
+| agents/windows-recovery/bin/Release/net10.0/win-x64/Microsoft.Extensions.FileSystemGlobbing.dll | مخرجات نشر Recovery .NET (agents/windows-recovery/bin) | مكتبة امتداد .NET (FileSystemGlobbing) لخدمات مثل الاستضافة أو الإعداد أو التسجيل أو الحقن؛ ملف runtime مجمّع، وليس مصدر FileGuard. |
+| agents/windows-recovery/bin/Release/net10.0/win-x64/Microsoft.Extensions.Hosting.Abstractions.dll | مخرجات نشر Recovery .NET (agents/windows-recovery/bin) | مكتبة امتداد .NET (Hosting Abstractions) لخدمات مثل الاستضافة أو الإعداد أو التسجيل أو الحقن؛ ملف runtime مجمّع، وليس مصدر FileGuard. |
+| agents/windows-recovery/bin/Release/net10.0/win-x64/Microsoft.Extensions.Hosting.dll | مخرجات نشر Recovery .NET (agents/windows-recovery/bin) | مكتبة امتداد .NET (Hosting) لخدمات مثل الاستضافة أو الإعداد أو التسجيل أو الحقن؛ ملف runtime مجمّع، وليس مصدر FileGuard. |
+| agents/windows-recovery/bin/Release/net10.0/win-x64/Microsoft.Extensions.Hosting.WindowsServices.dll | مخرجات نشر Recovery .NET (agents/windows-recovery/bin) | مكتبة امتداد .NET (Hosting WindowsServices) لخدمات مثل الاستضافة أو الإعداد أو التسجيل أو الحقن؛ ملف runtime مجمّع، وليس مصدر FileGuard. |
+| agents/windows-recovery/bin/Release/net10.0/win-x64/Microsoft.Extensions.Http.dll | مخرجات نشر Recovery .NET (agents/windows-recovery/bin) | مكتبة امتداد .NET (Http) لخدمات مثل الاستضافة أو الإعداد أو التسجيل أو الحقن؛ ملف runtime مجمّع، وليس مصدر FileGuard. |
+| agents/windows-recovery/bin/Release/net10.0/win-x64/Microsoft.Extensions.Identity.Core.dll | مخرجات نشر Recovery .NET (agents/windows-recovery/bin) | مكتبة امتداد .NET (Identity Core) لخدمات مثل الاستضافة أو الإعداد أو التسجيل أو الحقن؛ ملف runtime مجمّع، وليس مصدر FileGuard. |
+| agents/windows-recovery/bin/Release/net10.0/win-x64/Microsoft.Extensions.Identity.Stores.dll | مخرجات نشر Recovery .NET (agents/windows-recovery/bin) | مكتبة امتداد .NET (Identity Stores) لخدمات مثل الاستضافة أو الإعداد أو التسجيل أو الحقن؛ ملف runtime مجمّع، وليس مصدر FileGuard. |
+| agents/windows-recovery/bin/Release/net10.0/win-x64/Microsoft.Extensions.Localization.Abstractions.dll | مخرجات نشر Recovery .NET (agents/windows-recovery/bin) | مكتبة امتداد .NET (Localization Abstractions) لخدمات مثل الاستضافة أو الإعداد أو التسجيل أو الحقن؛ ملف runtime مجمّع، وليس مصدر FileGuard. |
+| agents/windows-recovery/bin/Release/net10.0/win-x64/Microsoft.Extensions.Localization.dll | مخرجات نشر Recovery .NET (agents/windows-recovery/bin) | مكتبة امتداد .NET (Localization) لخدمات مثل الاستضافة أو الإعداد أو التسجيل أو الحقن؛ ملف runtime مجمّع، وليس مصدر FileGuard. |
+| agents/windows-recovery/bin/Release/net10.0/win-x64/Microsoft.Extensions.Logging.Abstractions.dll | مخرجات نشر Recovery .NET (agents/windows-recovery/bin) | مكتبة امتداد .NET (Logging Abstractions) لخدمات مثل الاستضافة أو الإعداد أو التسجيل أو الحقن؛ ملف runtime مجمّع، وليس مصدر FileGuard. |
+| agents/windows-recovery/bin/Release/net10.0/win-x64/Microsoft.Extensions.Logging.Configuration.dll | مخرجات نشر Recovery .NET (agents/windows-recovery/bin) | مكتبة امتداد .NET (Logging Configuration) لخدمات مثل الاستضافة أو الإعداد أو التسجيل أو الحقن؛ ملف runtime مجمّع، وليس مصدر FileGuard. |
+| agents/windows-recovery/bin/Release/net10.0/win-x64/Microsoft.Extensions.Logging.Console.dll | مخرجات نشر Recovery .NET (agents/windows-recovery/bin) | مكتبة امتداد .NET (Logging Console) لخدمات مثل الاستضافة أو الإعداد أو التسجيل أو الحقن؛ ملف runtime مجمّع، وليس مصدر FileGuard. |
+| agents/windows-recovery/bin/Release/net10.0/win-x64/Microsoft.Extensions.Logging.Debug.dll | مخرجات نشر Recovery .NET (agents/windows-recovery/bin) | مكتبة امتداد .NET (Logging Debug) لخدمات مثل الاستضافة أو الإعداد أو التسجيل أو الحقن؛ ملف runtime مجمّع، وليس مصدر FileGuard. |
+| agents/windows-recovery/bin/Release/net10.0/win-x64/Microsoft.Extensions.Logging.dll | مخرجات نشر Recovery .NET (agents/windows-recovery/bin) | مكتبة امتداد .NET (Logging) لخدمات مثل الاستضافة أو الإعداد أو التسجيل أو الحقن؛ ملف runtime مجمّع، وليس مصدر FileGuard. |
+| agents/windows-recovery/bin/Release/net10.0/win-x64/Microsoft.Extensions.Logging.EventLog.dll | مخرجات نشر Recovery .NET (agents/windows-recovery/bin) | مكتبة امتداد .NET (Logging EventLog) لخدمات مثل الاستضافة أو الإعداد أو التسجيل أو الحقن؛ ملف runtime مجمّع، وليس مصدر FileGuard. |
+| agents/windows-recovery/bin/Release/net10.0/win-x64/Microsoft.Extensions.Logging.EventSource.dll | مخرجات نشر Recovery .NET (agents/windows-recovery/bin) | مكتبة امتداد .NET (Logging EventSource) لخدمات مثل الاستضافة أو الإعداد أو التسجيل أو الحقن؛ ملف runtime مجمّع، وليس مصدر FileGuard. |
+| agents/windows-recovery/bin/Release/net10.0/win-x64/Microsoft.Extensions.Logging.TraceSource.dll | مخرجات نشر Recovery .NET (agents/windows-recovery/bin) | مكتبة امتداد .NET (Logging TraceSource) لخدمات مثل الاستضافة أو الإعداد أو التسجيل أو الحقن؛ ملف runtime مجمّع، وليس مصدر FileGuard. |
+| agents/windows-recovery/bin/Release/net10.0/win-x64/Microsoft.Extensions.ObjectPool.dll | مخرجات نشر Recovery .NET (agents/windows-recovery/bin) | مكتبة امتداد .NET (ObjectPool) لخدمات مثل الاستضافة أو الإعداد أو التسجيل أو الحقن؛ ملف runtime مجمّع، وليس مصدر FileGuard. |
+| agents/windows-recovery/bin/Release/net10.0/win-x64/Microsoft.Extensions.Options.ConfigurationExtensions.dll | مخرجات نشر Recovery .NET (agents/windows-recovery/bin) | مكتبة امتداد .NET (Options ConfigurationExtensions) لخدمات مثل الاستضافة أو الإعداد أو التسجيل أو الحقن؛ ملف runtime مجمّع، وليس مصدر FileGuard. |
+| agents/windows-recovery/bin/Release/net10.0/win-x64/Microsoft.Extensions.Options.DataAnnotations.dll | مخرجات نشر Recovery .NET (agents/windows-recovery/bin) | مكتبة امتداد .NET (Options DataAnnotations) لخدمات مثل الاستضافة أو الإعداد أو التسجيل أو الحقن؛ ملف runtime مجمّع، وليس مصدر FileGuard. |
+| agents/windows-recovery/bin/Release/net10.0/win-x64/Microsoft.Extensions.Options.dll | مخرجات نشر Recovery .NET (agents/windows-recovery/bin) | مكتبة امتداد .NET (Options) لخدمات مثل الاستضافة أو الإعداد أو التسجيل أو الحقن؛ ملف runtime مجمّع، وليس مصدر FileGuard. |
+| agents/windows-recovery/bin/Release/net10.0/win-x64/Microsoft.Extensions.Primitives.dll | مخرجات نشر Recovery .NET (agents/windows-recovery/bin) | مكتبة امتداد .NET (Primitives) لخدمات مثل الاستضافة أو الإعداد أو التسجيل أو الحقن؛ ملف runtime مجمّع، وليس مصدر FileGuard. |
+| agents/windows-recovery/bin/Release/net10.0/win-x64/Microsoft.Extensions.Validation.dll | مخرجات نشر Recovery .NET (agents/windows-recovery/bin) | مكتبة امتداد .NET (Validation) لخدمات مثل الاستضافة أو الإعداد أو التسجيل أو الحقن؛ ملف runtime مجمّع، وليس مصدر FileGuard. |
+| agents/windows-recovery/bin/Release/net10.0/win-x64/Microsoft.Extensions.WebEncoders.dll | مخرجات نشر Recovery .NET (agents/windows-recovery/bin) | مكتبة امتداد .NET (WebEncoders) لخدمات مثل الاستضافة أو الإعداد أو التسجيل أو الحقن؛ ملف runtime مجمّع، وليس مصدر FileGuard. |
+| agents/windows-recovery/bin/Release/net10.0/win-x64/Microsoft.JSInterop.dll | مخرجات نشر Recovery .NET (agents/windows-recovery/bin) | مكتبة ثنائية ضمن نشر/اختبار .NET 10 باسم Microsoft.JSInterop؛ وظيفتها تنتمي إلى runtime أو dependency محدد بالاسم، ولا تُحرر يدويًا. |
+| agents/windows-recovery/bin/Release/net10.0/win-x64/Microsoft.Net.Http.Headers.dll | مخرجات نشر Recovery .NET (agents/windows-recovery/bin) | مكتبة ثنائية ضمن نشر/اختبار .NET 10 باسم Microsoft.Net.Http.Headers؛ وظيفتها تنتمي إلى runtime أو dependency محدد بالاسم، ولا تُحرر يدويًا. |
+| agents/windows-recovery/bin/Release/net10.0/win-x64/Microsoft.VisualBasic.Core.dll | مخرجات نشر Recovery .NET (agents/windows-recovery/bin) | مكتبة ثنائية ضمن نشر/اختبار .NET 10 باسم Microsoft.VisualBasic.Core؛ وظيفتها تنتمي إلى runtime أو dependency محدد بالاسم، ولا تُحرر يدويًا. |
+| agents/windows-recovery/bin/Release/net10.0/win-x64/Microsoft.VisualBasic.dll | مخرجات نشر Recovery .NET (agents/windows-recovery/bin) | مكتبة قياسية من .NET 10 لعائلة Microsoft VisualBasic؛ توفر API runtime للتطبيق، ولا تعدل يدويًا. |
+| agents/windows-recovery/bin/Release/net10.0/win-x64/Microsoft.Win32.Primitives.dll | مخرجات نشر Recovery .NET (agents/windows-recovery/bin) | مكتبة ثنائية ضمن نشر/اختبار .NET 10 باسم Microsoft.Win32.Primitives؛ وظيفتها تنتمي إلى runtime أو dependency محدد بالاسم، ولا تُحرر يدويًا. |
+| agents/windows-recovery/bin/Release/net10.0/win-x64/Microsoft.Win32.Registry.dll | مخرجات نشر Recovery .NET (agents/windows-recovery/bin) | مكتبة ثنائية ضمن نشر/اختبار .NET 10 باسم Microsoft.Win32.Registry؛ وظيفتها تنتمي إلى runtime أو dependency محدد بالاسم، ولا تُحرر يدويًا. |
+| agents/windows-recovery/bin/Release/net10.0/win-x64/mscordaccore.dll | مخرجات نشر Recovery .NET (agents/windows-recovery/bin) | مكوّن تشخيص أو تصحيح .NET يساعد أدوات runtime في قراءة معلومات العملية والرموز. |
+| agents/windows-recovery/bin/Release/net10.0/win-x64/mscordaccore_amd64_amd64_10.0.1526.53008.dll | مخرجات نشر Recovery .NET (agents/windows-recovery/bin) | مكوّن تشخيص أو تصحيح .NET يساعد أدوات runtime في قراءة معلومات العملية والرموز. |
+| agents/windows-recovery/bin/Release/net10.0/win-x64/mscordbi.dll | مخرجات نشر Recovery .NET (agents/windows-recovery/bin) | مكوّن تشخيص أو تصحيح .NET يساعد أدوات runtime في قراءة معلومات العملية والرموز. |
+| agents/windows-recovery/bin/Release/net10.0/win-x64/mscorlib.dll | مخرجات نشر Recovery .NET (agents/windows-recovery/bin) | مكتبة قياسية من .NET 10 لعائلة mscorlib؛ توفر API runtime للتطبيق، ولا تعدل يدويًا. |
+| agents/windows-recovery/bin/Release/net10.0/win-x64/mscorrc.dll | مخرجات نشر Recovery .NET (agents/windows-recovery/bin) | مكتبة ثنائية ضمن نشر/اختبار .NET 10 باسم mscorrc؛ وظيفتها تنتمي إلى runtime أو dependency محدد بالاسم، ولا تُحرر يدويًا. |
+| agents/windows-recovery/bin/Release/net10.0/win-x64/msquic.dll | مخرجات نشر Recovery .NET (agents/windows-recovery/bin) | مكتبة نقل QUIC من .NET runtime، مرفقة كاعتماد منصة. |
+| agents/windows-recovery/bin/Release/net10.0/win-x64/netstandard.dll | مخرجات نشر Recovery .NET (agents/windows-recovery/bin) | مكتبة قياسية من .NET 10 لعائلة netstandard؛ توفر API runtime للتطبيق، ولا تعدل يدويًا. |
+| agents/windows-recovery/bin/Release/net10.0/win-x64/System.AppContext.dll | مخرجات نشر Recovery .NET (agents/windows-recovery/bin) | مكتبة قياسية من .NET 10 لعائلة AppContext؛ توفر API runtime للتطبيق، ولا تعدل يدويًا. |
+| agents/windows-recovery/bin/Release/net10.0/win-x64/System.Buffers.dll | مخرجات نشر Recovery .NET (agents/windows-recovery/bin) | مكتبة قياسية من .NET 10 لعائلة Buffers؛ توفر API runtime للتطبيق، ولا تعدل يدويًا. |
+| agents/windows-recovery/bin/Release/net10.0/win-x64/System.Collections.Concurrent.dll | مخرجات نشر Recovery .NET (agents/windows-recovery/bin) | مكتبة قياسية من .NET 10 لعائلة Collections Concurrent؛ توفر API runtime للتطبيق، ولا تعدل يدويًا. |
+| agents/windows-recovery/bin/Release/net10.0/win-x64/System.Collections.dll | مخرجات نشر Recovery .NET (agents/windows-recovery/bin) | مكتبة قياسية من .NET 10 لعائلة Collections؛ توفر API runtime للتطبيق، ولا تعدل يدويًا. |
+| agents/windows-recovery/bin/Release/net10.0/win-x64/System.Collections.Immutable.dll | مخرجات نشر Recovery .NET (agents/windows-recovery/bin) | مكتبة قياسية من .NET 10 لعائلة Collections Immutable؛ توفر API runtime للتطبيق، ولا تعدل يدويًا. |
+| agents/windows-recovery/bin/Release/net10.0/win-x64/System.Collections.NonGeneric.dll | مخرجات نشر Recovery .NET (agents/windows-recovery/bin) | مكتبة قياسية من .NET 10 لعائلة Collections NonGeneric؛ توفر API runtime للتطبيق، ولا تعدل يدويًا. |
+| agents/windows-recovery/bin/Release/net10.0/win-x64/System.Collections.Specialized.dll | مخرجات نشر Recovery .NET (agents/windows-recovery/bin) | مكتبة قياسية من .NET 10 لعائلة Collections Specialized؛ توفر API runtime للتطبيق، ولا تعدل يدويًا. |
+| agents/windows-recovery/bin/Release/net10.0/win-x64/System.ComponentModel.Annotations.dll | مخرجات نشر Recovery .NET (agents/windows-recovery/bin) | مكتبة قياسية من .NET 10 لعائلة ComponentModel Annotations؛ توفر API runtime للتطبيق، ولا تعدل يدويًا. |
+| agents/windows-recovery/bin/Release/net10.0/win-x64/System.ComponentModel.DataAnnotations.dll | مخرجات نشر Recovery .NET (agents/windows-recovery/bin) | مكتبة قياسية من .NET 10 لعائلة ComponentModel DataAnnotations؛ توفر API runtime للتطبيق، ولا تعدل يدويًا. |
+| agents/windows-recovery/bin/Release/net10.0/win-x64/System.ComponentModel.dll | مخرجات نشر Recovery .NET (agents/windows-recovery/bin) | مكتبة قياسية من .NET 10 لعائلة ComponentModel؛ توفر API runtime للتطبيق، ولا تعدل يدويًا. |
+| agents/windows-recovery/bin/Release/net10.0/win-x64/System.ComponentModel.EventBasedAsync.dll | مخرجات نشر Recovery .NET (agents/windows-recovery/bin) | مكتبة قياسية من .NET 10 لعائلة ComponentModel EventBasedAsync؛ توفر API runtime للتطبيق، ولا تعدل يدويًا. |
+| agents/windows-recovery/bin/Release/net10.0/win-x64/System.ComponentModel.Primitives.dll | مخرجات نشر Recovery .NET (agents/windows-recovery/bin) | مكتبة قياسية من .NET 10 لعائلة ComponentModel Primitives؛ توفر API runtime للتطبيق، ولا تعدل يدويًا. |
+| agents/windows-recovery/bin/Release/net10.0/win-x64/System.ComponentModel.TypeConverter.dll | مخرجات نشر Recovery .NET (agents/windows-recovery/bin) | مكتبة قياسية من .NET 10 لعائلة ComponentModel TypeConverter؛ توفر API runtime للتطبيق، ولا تعدل يدويًا. |
+| agents/windows-recovery/bin/Release/net10.0/win-x64/System.Configuration.dll | مخرجات نشر Recovery .NET (agents/windows-recovery/bin) | مكتبة قياسية من .NET 10 لعائلة Configuration؛ توفر API runtime للتطبيق، ولا تعدل يدويًا. |
+| agents/windows-recovery/bin/Release/net10.0/win-x64/System.Console.dll | مخرجات نشر Recovery .NET (agents/windows-recovery/bin) | مكتبة قياسية من .NET 10 لعائلة Console؛ توفر API runtime للتطبيق، ولا تعدل يدويًا. |
+| agents/windows-recovery/bin/Release/net10.0/win-x64/System.Core.dll | مخرجات نشر Recovery .NET (agents/windows-recovery/bin) | مكتبة قياسية من .NET 10 لعائلة Core؛ توفر API runtime للتطبيق، ولا تعدل يدويًا. |
+| agents/windows-recovery/bin/Release/net10.0/win-x64/System.Data.Common.dll | مخرجات نشر Recovery .NET (agents/windows-recovery/bin) | مكتبة قياسية من .NET 10 لعائلة Data Common؛ توفر API runtime للتطبيق، ولا تعدل يدويًا. |
+| agents/windows-recovery/bin/Release/net10.0/win-x64/System.Data.DataSetExtensions.dll | مخرجات نشر Recovery .NET (agents/windows-recovery/bin) | مكتبة قياسية من .NET 10 لعائلة Data DataSetExtensions؛ توفر API runtime للتطبيق، ولا تعدل يدويًا. |
+| agents/windows-recovery/bin/Release/net10.0/win-x64/System.Data.dll | مخرجات نشر Recovery .NET (agents/windows-recovery/bin) | مكتبة قياسية من .NET 10 لعائلة Data؛ توفر API runtime للتطبيق، ولا تعدل يدويًا. |
+| agents/windows-recovery/bin/Release/net10.0/win-x64/System.Diagnostics.Contracts.dll | مخرجات نشر Recovery .NET (agents/windows-recovery/bin) | مكتبة قياسية من .NET 10 لعائلة Diagnostics Contracts؛ توفر API runtime للتطبيق، ولا تعدل يدويًا. |
+| agents/windows-recovery/bin/Release/net10.0/win-x64/System.Diagnostics.Debug.dll | مخرجات نشر Recovery .NET (agents/windows-recovery/bin) | مكتبة قياسية من .NET 10 لعائلة Diagnostics Debug؛ توفر API runtime للتطبيق، ولا تعدل يدويًا. |
+| agents/windows-recovery/bin/Release/net10.0/win-x64/System.Diagnostics.DiagnosticSource.dll | مخرجات نشر Recovery .NET (agents/windows-recovery/bin) | مكتبة قياسية من .NET 10 لعائلة Diagnostics DiagnosticSource؛ توفر API runtime للتطبيق، ولا تعدل يدويًا. |
+| agents/windows-recovery/bin/Release/net10.0/win-x64/System.Diagnostics.EventLog.dll | مخرجات نشر Recovery .NET (agents/windows-recovery/bin) | مكتبة قياسية من .NET 10 لعائلة Diagnostics EventLog؛ توفر API runtime للتطبيق، ولا تعدل يدويًا. |
+| agents/windows-recovery/bin/Release/net10.0/win-x64/System.Diagnostics.EventLog.Messages.dll | مخرجات نشر Recovery .NET (agents/windows-recovery/bin) | مكتبة قياسية من .NET 10 لعائلة Diagnostics EventLog Messages؛ توفر API runtime للتطبيق، ولا تعدل يدويًا. |
+| agents/windows-recovery/bin/Release/net10.0/win-x64/System.Diagnostics.FileVersionInfo.dll | مخرجات نشر Recovery .NET (agents/windows-recovery/bin) | مكتبة قياسية من .NET 10 لعائلة Diagnostics FileVersionInfo؛ توفر API runtime للتطبيق، ولا تعدل يدويًا. |
+| agents/windows-recovery/bin/Release/net10.0/win-x64/System.Diagnostics.Process.dll | مخرجات نشر Recovery .NET (agents/windows-recovery/bin) | مكتبة قياسية من .NET 10 لعائلة Diagnostics Process؛ توفر API runtime للتطبيق، ولا تعدل يدويًا. |
+| agents/windows-recovery/bin/Release/net10.0/win-x64/System.Diagnostics.StackTrace.dll | مخرجات نشر Recovery .NET (agents/windows-recovery/bin) | مكتبة قياسية من .NET 10 لعائلة Diagnostics StackTrace؛ توفر API runtime للتطبيق، ولا تعدل يدويًا. |
+| agents/windows-recovery/bin/Release/net10.0/win-x64/System.Diagnostics.TextWriterTraceListener.dll | مخرجات نشر Recovery .NET (agents/windows-recovery/bin) | مكتبة قياسية من .NET 10 لعائلة Diagnostics TextWriterTraceListener؛ توفر API runtime للتطبيق، ولا تعدل يدويًا. |
+| agents/windows-recovery/bin/Release/net10.0/win-x64/System.Diagnostics.Tools.dll | مخرجات نشر Recovery .NET (agents/windows-recovery/bin) | مكتبة قياسية من .NET 10 لعائلة Diagnostics Tools؛ توفر API runtime للتطبيق، ولا تعدل يدويًا. |
+| agents/windows-recovery/bin/Release/net10.0/win-x64/System.Diagnostics.TraceSource.dll | مخرجات نشر Recovery .NET (agents/windows-recovery/bin) | مكتبة قياسية من .NET 10 لعائلة Diagnostics TraceSource؛ توفر API runtime للتطبيق، ولا تعدل يدويًا. |
+| agents/windows-recovery/bin/Release/net10.0/win-x64/System.Diagnostics.Tracing.dll | مخرجات نشر Recovery .NET (agents/windows-recovery/bin) | مكتبة قياسية من .NET 10 لعائلة Diagnostics Tracing؛ توفر API runtime للتطبيق، ولا تعدل يدويًا. |
+| agents/windows-recovery/bin/Release/net10.0/win-x64/System.dll | مخرجات نشر Recovery .NET (agents/windows-recovery/bin) | مكتبة ثنائية ضمن نشر/اختبار .NET 10 باسم System؛ وظيفتها تنتمي إلى runtime أو dependency محدد بالاسم، ولا تُحرر يدويًا. |
+| agents/windows-recovery/bin/Release/net10.0/win-x64/System.Drawing.dll | مخرجات نشر Recovery .NET (agents/windows-recovery/bin) | مكتبة قياسية من .NET 10 لعائلة Drawing؛ توفر API runtime للتطبيق، ولا تعدل يدويًا. |
+| agents/windows-recovery/bin/Release/net10.0/win-x64/System.Drawing.Primitives.dll | مخرجات نشر Recovery .NET (agents/windows-recovery/bin) | مكتبة قياسية من .NET 10 لعائلة Drawing Primitives؛ توفر API runtime للتطبيق، ولا تعدل يدويًا. |
+| agents/windows-recovery/bin/Release/net10.0/win-x64/System.Dynamic.Runtime.dll | مخرجات نشر Recovery .NET (agents/windows-recovery/bin) | مكتبة قياسية من .NET 10 لعائلة Dynamic Runtime؛ توفر API runtime للتطبيق، ولا تعدل يدويًا. |
+| agents/windows-recovery/bin/Release/net10.0/win-x64/System.Formats.Asn1.dll | مخرجات نشر Recovery .NET (agents/windows-recovery/bin) | مكتبة قياسية من .NET 10 لعائلة Formats Asn1؛ توفر API runtime للتطبيق، ولا تعدل يدويًا. |
+| agents/windows-recovery/bin/Release/net10.0/win-x64/System.Formats.Cbor.dll | مخرجات نشر Recovery .NET (agents/windows-recovery/bin) | مكتبة قياسية من .NET 10 لعائلة Formats Cbor؛ توفر API runtime للتطبيق، ولا تعدل يدويًا. |
+| agents/windows-recovery/bin/Release/net10.0/win-x64/System.Formats.Tar.dll | مخرجات نشر Recovery .NET (agents/windows-recovery/bin) | مكتبة قياسية من .NET 10 لعائلة Formats Tar؛ توفر API runtime للتطبيق، ولا تعدل يدويًا. |
+| agents/windows-recovery/bin/Release/net10.0/win-x64/System.Globalization.Calendars.dll | مخرجات نشر Recovery .NET (agents/windows-recovery/bin) | مكتبة قياسية من .NET 10 لعائلة Globalization Calendars؛ توفر API runtime للتطبيق، ولا تعدل يدويًا. |
+| agents/windows-recovery/bin/Release/net10.0/win-x64/System.Globalization.dll | مخرجات نشر Recovery .NET (agents/windows-recovery/bin) | مكتبة قياسية من .NET 10 لعائلة Globalization؛ توفر API runtime للتطبيق، ولا تعدل يدويًا. |
+| agents/windows-recovery/bin/Release/net10.0/win-x64/System.Globalization.Extensions.dll | مخرجات نشر Recovery .NET (agents/windows-recovery/bin) | مكتبة قياسية من .NET 10 لعائلة Globalization Extensions؛ توفر API runtime للتطبيق، ولا تعدل يدويًا. |
+| agents/windows-recovery/bin/Release/net10.0/win-x64/System.IO.Compression.Brotli.dll | مخرجات نشر Recovery .NET (agents/windows-recovery/bin) | مكتبة قياسية من .NET 10 لعائلة IO Compression Brotli؛ توفر API runtime للتطبيق، ولا تعدل يدويًا. |
+| agents/windows-recovery/bin/Release/net10.0/win-x64/System.IO.Compression.dll | مخرجات نشر Recovery .NET (agents/windows-recovery/bin) | مكتبة قياسية من .NET 10 لعائلة IO Compression؛ توفر API runtime للتطبيق، ولا تعدل يدويًا. |
+| agents/windows-recovery/bin/Release/net10.0/win-x64/System.IO.Compression.FileSystem.dll | مخرجات نشر Recovery .NET (agents/windows-recovery/bin) | مكتبة قياسية من .NET 10 لعائلة IO Compression FileSystem؛ توفر API runtime للتطبيق، ولا تعدل يدويًا. |
+| agents/windows-recovery/bin/Release/net10.0/win-x64/System.IO.Compression.Native.dll | مخرجات نشر Recovery .NET (agents/windows-recovery/bin) | مكتبة قياسية من .NET 10 لعائلة IO Compression Native؛ توفر API runtime للتطبيق، ولا تعدل يدويًا. |
+| agents/windows-recovery/bin/Release/net10.0/win-x64/System.IO.Compression.ZipFile.dll | مخرجات نشر Recovery .NET (agents/windows-recovery/bin) | مكتبة قياسية من .NET 10 لعائلة IO Compression ZipFile؛ توفر API runtime للتطبيق، ولا تعدل يدويًا. |
+| agents/windows-recovery/bin/Release/net10.0/win-x64/System.IO.dll | مخرجات نشر Recovery .NET (agents/windows-recovery/bin) | مكتبة قياسية من .NET 10 لعائلة IO؛ توفر API runtime للتطبيق، ولا تعدل يدويًا. |
+| agents/windows-recovery/bin/Release/net10.0/win-x64/System.IO.FileSystem.AccessControl.dll | مخرجات نشر Recovery .NET (agents/windows-recovery/bin) | مكتبة قياسية من .NET 10 لعائلة IO FileSystem AccessControl؛ توفر API runtime للتطبيق، ولا تعدل يدويًا. |
+| agents/windows-recovery/bin/Release/net10.0/win-x64/System.IO.FileSystem.dll | مخرجات نشر Recovery .NET (agents/windows-recovery/bin) | مكتبة قياسية من .NET 10 لعائلة IO FileSystem؛ توفر API runtime للتطبيق، ولا تعدل يدويًا. |
+| agents/windows-recovery/bin/Release/net10.0/win-x64/System.IO.FileSystem.DriveInfo.dll | مخرجات نشر Recovery .NET (agents/windows-recovery/bin) | مكتبة قياسية من .NET 10 لعائلة IO FileSystem DriveInfo؛ توفر API runtime للتطبيق، ولا تعدل يدويًا. |
+| agents/windows-recovery/bin/Release/net10.0/win-x64/System.IO.FileSystem.Primitives.dll | مخرجات نشر Recovery .NET (agents/windows-recovery/bin) | مكتبة قياسية من .NET 10 لعائلة IO FileSystem Primitives؛ توفر API runtime للتطبيق، ولا تعدل يدويًا. |
+| agents/windows-recovery/bin/Release/net10.0/win-x64/System.IO.FileSystem.Watcher.dll | مخرجات نشر Recovery .NET (agents/windows-recovery/bin) | مكتبة قياسية من .NET 10 لعائلة IO FileSystem Watcher؛ توفر API runtime للتطبيق، ولا تعدل يدويًا. |
+| agents/windows-recovery/bin/Release/net10.0/win-x64/System.IO.IsolatedStorage.dll | مخرجات نشر Recovery .NET (agents/windows-recovery/bin) | مكتبة قياسية من .NET 10 لعائلة IO IsolatedStorage؛ توفر API runtime للتطبيق، ولا تعدل يدويًا. |
+| agents/windows-recovery/bin/Release/net10.0/win-x64/System.IO.MemoryMappedFiles.dll | مخرجات نشر Recovery .NET (agents/windows-recovery/bin) | مكتبة قياسية من .NET 10 لعائلة IO MemoryMappedFiles؛ توفر API runtime للتطبيق، ولا تعدل يدويًا. |
+| agents/windows-recovery/bin/Release/net10.0/win-x64/System.IO.Pipelines.dll | مخرجات نشر Recovery .NET (agents/windows-recovery/bin) | مكتبة قياسية من .NET 10 لعائلة IO Pipelines؛ توفر API runtime للتطبيق، ولا تعدل يدويًا. |
+| agents/windows-recovery/bin/Release/net10.0/win-x64/System.IO.Pipes.AccessControl.dll | مخرجات نشر Recovery .NET (agents/windows-recovery/bin) | مكتبة قياسية من .NET 10 لعائلة IO Pipes AccessControl؛ توفر API runtime للتطبيق، ولا تعدل يدويًا. |
+| agents/windows-recovery/bin/Release/net10.0/win-x64/System.IO.Pipes.dll | مخرجات نشر Recovery .NET (agents/windows-recovery/bin) | مكتبة قياسية من .NET 10 لعائلة IO Pipes؛ توفر API runtime للتطبيق، ولا تعدل يدويًا. |
+| agents/windows-recovery/bin/Release/net10.0/win-x64/System.IO.UnmanagedMemoryStream.dll | مخرجات نشر Recovery .NET (agents/windows-recovery/bin) | مكتبة قياسية من .NET 10 لعائلة IO UnmanagedMemoryStream؛ توفر API runtime للتطبيق، ولا تعدل يدويًا. |
+| agents/windows-recovery/bin/Release/net10.0/win-x64/System.Linq.AsyncEnumerable.dll | مخرجات نشر Recovery .NET (agents/windows-recovery/bin) | مكتبة قياسية من .NET 10 لعائلة Linq AsyncEnumerable؛ توفر API runtime للتطبيق، ولا تعدل يدويًا. |
+| agents/windows-recovery/bin/Release/net10.0/win-x64/System.Linq.dll | مخرجات نشر Recovery .NET (agents/windows-recovery/bin) | مكتبة قياسية من .NET 10 لعائلة Linq؛ توفر API runtime للتطبيق، ولا تعدل يدويًا. |
+| agents/windows-recovery/bin/Release/net10.0/win-x64/System.Linq.Expressions.dll | مخرجات نشر Recovery .NET (agents/windows-recovery/bin) | مكتبة قياسية من .NET 10 لعائلة Linq Expressions؛ توفر API runtime للتطبيق، ولا تعدل يدويًا. |
+| agents/windows-recovery/bin/Release/net10.0/win-x64/System.Linq.Parallel.dll | مخرجات نشر Recovery .NET (agents/windows-recovery/bin) | مكتبة قياسية من .NET 10 لعائلة Linq Parallel؛ توفر API runtime للتطبيق، ولا تعدل يدويًا. |
+| agents/windows-recovery/bin/Release/net10.0/win-x64/System.Linq.Queryable.dll | مخرجات نشر Recovery .NET (agents/windows-recovery/bin) | مكتبة قياسية من .NET 10 لعائلة Linq Queryable؛ توفر API runtime للتطبيق، ولا تعدل يدويًا. |
+| agents/windows-recovery/bin/Release/net10.0/win-x64/System.Memory.dll | مخرجات نشر Recovery .NET (agents/windows-recovery/bin) | مكتبة قياسية من .NET 10 لعائلة Memory؛ توفر API runtime للتطبيق، ولا تعدل يدويًا. |
+| agents/windows-recovery/bin/Release/net10.0/win-x64/System.Net.dll | مخرجات نشر Recovery .NET (agents/windows-recovery/bin) | مكتبة قياسية من .NET 10 لعائلة Net؛ توفر API runtime للتطبيق، ولا تعدل يدويًا. |
+| agents/windows-recovery/bin/Release/net10.0/win-x64/System.Net.Http.dll | مخرجات نشر Recovery .NET (agents/windows-recovery/bin) | مكتبة قياسية من .NET 10 لعائلة Net Http؛ توفر API runtime للتطبيق، ولا تعدل يدويًا. |
+| agents/windows-recovery/bin/Release/net10.0/win-x64/System.Net.Http.Json.dll | مخرجات نشر Recovery .NET (agents/windows-recovery/bin) | مكتبة قياسية من .NET 10 لعائلة Net Http Json؛ توفر API runtime للتطبيق، ولا تعدل يدويًا. |
+| agents/windows-recovery/bin/Release/net10.0/win-x64/System.Net.HttpListener.dll | مخرجات نشر Recovery .NET (agents/windows-recovery/bin) | مكتبة قياسية من .NET 10 لعائلة Net HttpListener؛ توفر API runtime للتطبيق، ولا تعدل يدويًا. |
+| agents/windows-recovery/bin/Release/net10.0/win-x64/System.Net.Mail.dll | مخرجات نشر Recovery .NET (agents/windows-recovery/bin) | مكتبة قياسية من .NET 10 لعائلة Net Mail؛ توفر API runtime للتطبيق، ولا تعدل يدويًا. |
+| agents/windows-recovery/bin/Release/net10.0/win-x64/System.Net.NameResolution.dll | مخرجات نشر Recovery .NET (agents/windows-recovery/bin) | مكتبة قياسية من .NET 10 لعائلة Net NameResolution؛ توفر API runtime للتطبيق، ولا تعدل يدويًا. |
+| agents/windows-recovery/bin/Release/net10.0/win-x64/System.Net.NetworkInformation.dll | مخرجات نشر Recovery .NET (agents/windows-recovery/bin) | مكتبة قياسية من .NET 10 لعائلة Net NetworkInformation؛ توفر API runtime للتطبيق، ولا تعدل يدويًا. |
+| agents/windows-recovery/bin/Release/net10.0/win-x64/System.Net.Ping.dll | مخرجات نشر Recovery .NET (agents/windows-recovery/bin) | مكتبة قياسية من .NET 10 لعائلة Net Ping؛ توفر API runtime للتطبيق، ولا تعدل يدويًا. |
+| agents/windows-recovery/bin/Release/net10.0/win-x64/System.Net.Primitives.dll | مخرجات نشر Recovery .NET (agents/windows-recovery/bin) | مكتبة قياسية من .NET 10 لعائلة Net Primitives؛ توفر API runtime للتطبيق، ولا تعدل يدويًا. |
+| agents/windows-recovery/bin/Release/net10.0/win-x64/System.Net.Quic.dll | مخرجات نشر Recovery .NET (agents/windows-recovery/bin) | مكتبة قياسية من .NET 10 لعائلة Net Quic؛ توفر API runtime للتطبيق، ولا تعدل يدويًا. |
+| agents/windows-recovery/bin/Release/net10.0/win-x64/System.Net.Requests.dll | مخرجات نشر Recovery .NET (agents/windows-recovery/bin) | مكتبة قياسية من .NET 10 لعائلة Net Requests؛ توفر API runtime للتطبيق، ولا تعدل يدويًا. |
+| agents/windows-recovery/bin/Release/net10.0/win-x64/System.Net.Security.dll | مخرجات نشر Recovery .NET (agents/windows-recovery/bin) | مكتبة قياسية من .NET 10 لعائلة Net Security؛ توفر API runtime للتطبيق، ولا تعدل يدويًا. |
+| agents/windows-recovery/bin/Release/net10.0/win-x64/System.Net.ServerSentEvents.dll | مخرجات نشر Recovery .NET (agents/windows-recovery/bin) | مكتبة قياسية من .NET 10 لعائلة Net ServerSentEvents؛ توفر API runtime للتطبيق، ولا تعدل يدويًا. |
+| agents/windows-recovery/bin/Release/net10.0/win-x64/System.Net.ServicePoint.dll | مخرجات نشر Recovery .NET (agents/windows-recovery/bin) | مكتبة قياسية من .NET 10 لعائلة Net ServicePoint؛ توفر API runtime للتطبيق، ولا تعدل يدويًا. |
+| agents/windows-recovery/bin/Release/net10.0/win-x64/System.Net.Sockets.dll | مخرجات نشر Recovery .NET (agents/windows-recovery/bin) | مكتبة قياسية من .NET 10 لعائلة Net Sockets؛ توفر API runtime للتطبيق، ولا تعدل يدويًا. |
+| agents/windows-recovery/bin/Release/net10.0/win-x64/System.Net.WebClient.dll | مخرجات نشر Recovery .NET (agents/windows-recovery/bin) | مكتبة قياسية من .NET 10 لعائلة Net WebClient؛ توفر API runtime للتطبيق، ولا تعدل يدويًا. |
+| agents/windows-recovery/bin/Release/net10.0/win-x64/System.Net.WebHeaderCollection.dll | مخرجات نشر Recovery .NET (agents/windows-recovery/bin) | مكتبة قياسية من .NET 10 لعائلة Net WebHeaderCollection؛ توفر API runtime للتطبيق، ولا تعدل يدويًا. |
+| agents/windows-recovery/bin/Release/net10.0/win-x64/System.Net.WebProxy.dll | مخرجات نشر Recovery .NET (agents/windows-recovery/bin) | مكتبة قياسية من .NET 10 لعائلة Net WebProxy؛ توفر API runtime للتطبيق، ولا تعدل يدويًا. |
+| agents/windows-recovery/bin/Release/net10.0/win-x64/System.Net.WebSockets.Client.dll | مخرجات نشر Recovery .NET (agents/windows-recovery/bin) | مكتبة قياسية من .NET 10 لعائلة Net WebSockets Client؛ توفر API runtime للتطبيق، ولا تعدل يدويًا. |
+| agents/windows-recovery/bin/Release/net10.0/win-x64/System.Net.WebSockets.dll | مخرجات نشر Recovery .NET (agents/windows-recovery/bin) | مكتبة قياسية من .NET 10 لعائلة Net WebSockets؛ توفر API runtime للتطبيق، ولا تعدل يدويًا. |
+| agents/windows-recovery/bin/Release/net10.0/win-x64/System.Numerics.dll | مخرجات نشر Recovery .NET (agents/windows-recovery/bin) | مكتبة قياسية من .NET 10 لعائلة Numerics؛ توفر API runtime للتطبيق، ولا تعدل يدويًا. |
+| agents/windows-recovery/bin/Release/net10.0/win-x64/System.Numerics.Vectors.dll | مخرجات نشر Recovery .NET (agents/windows-recovery/bin) | مكتبة قياسية من .NET 10 لعائلة Numerics Vectors؛ توفر API runtime للتطبيق، ولا تعدل يدويًا. |
+| agents/windows-recovery/bin/Release/net10.0/win-x64/System.ObjectModel.dll | مخرجات نشر Recovery .NET (agents/windows-recovery/bin) | مكتبة قياسية من .NET 10 لعائلة ObjectModel؛ توفر API runtime للتطبيق، ولا تعدل يدويًا. |
+| agents/windows-recovery/bin/Release/net10.0/win-x64/System.Private.CoreLib.dll | مخرجات نشر Recovery .NET (agents/windows-recovery/bin) | مكتبة قياسية من .NET 10 لعائلة Private CoreLib؛ توفر API runtime للتطبيق، ولا تعدل يدويًا. |
+| agents/windows-recovery/bin/Release/net10.0/win-x64/System.Private.DataContractSerialization.dll | مخرجات نشر Recovery .NET (agents/windows-recovery/bin) | مكتبة قياسية من .NET 10 لعائلة Private DataContractSerialization؛ توفر API runtime للتطبيق، ولا تعدل يدويًا. |
+| agents/windows-recovery/bin/Release/net10.0/win-x64/System.Private.Uri.dll | مخرجات نشر Recovery .NET (agents/windows-recovery/bin) | مكتبة قياسية من .NET 10 لعائلة Private Uri؛ توفر API runtime للتطبيق، ولا تعدل يدويًا. |
+| agents/windows-recovery/bin/Release/net10.0/win-x64/System.Private.Xml.dll | مخرجات نشر Recovery .NET (agents/windows-recovery/bin) | مكتبة قياسية من .NET 10 لعائلة Private Xml؛ توفر API runtime للتطبيق، ولا تعدل يدويًا. |
+| agents/windows-recovery/bin/Release/net10.0/win-x64/System.Private.Xml.Linq.dll | مخرجات نشر Recovery .NET (agents/windows-recovery/bin) | مكتبة قياسية من .NET 10 لعائلة Private Xml Linq؛ توفر API runtime للتطبيق، ولا تعدل يدويًا. |
+| agents/windows-recovery/bin/Release/net10.0/win-x64/System.Reflection.DispatchProxy.dll | مخرجات نشر Recovery .NET (agents/windows-recovery/bin) | مكتبة قياسية من .NET 10 لعائلة Reflection DispatchProxy؛ توفر API runtime للتطبيق، ولا تعدل يدويًا. |
+| agents/windows-recovery/bin/Release/net10.0/win-x64/System.Reflection.dll | مخرجات نشر Recovery .NET (agents/windows-recovery/bin) | مكتبة قياسية من .NET 10 لعائلة Reflection؛ توفر API runtime للتطبيق، ولا تعدل يدويًا. |
+| agents/windows-recovery/bin/Release/net10.0/win-x64/System.Reflection.Emit.dll | مخرجات نشر Recovery .NET (agents/windows-recovery/bin) | مكتبة قياسية من .NET 10 لعائلة Reflection Emit؛ توفر API runtime للتطبيق، ولا تعدل يدويًا. |
+| agents/windows-recovery/bin/Release/net10.0/win-x64/System.Reflection.Emit.ILGeneration.dll | مخرجات نشر Recovery .NET (agents/windows-recovery/bin) | مكتبة قياسية من .NET 10 لعائلة Reflection Emit ILGeneration؛ توفر API runtime للتطبيق، ولا تعدل يدويًا. |
+| agents/windows-recovery/bin/Release/net10.0/win-x64/System.Reflection.Emit.Lightweight.dll | مخرجات نشر Recovery .NET (agents/windows-recovery/bin) | مكتبة قياسية من .NET 10 لعائلة Reflection Emit Lightweight؛ توفر API runtime للتطبيق، ولا تعدل يدويًا. |
+| agents/windows-recovery/bin/Release/net10.0/win-x64/System.Reflection.Extensions.dll | مخرجات نشر Recovery .NET (agents/windows-recovery/bin) | مكتبة قياسية من .NET 10 لعائلة Reflection Extensions؛ توفر API runtime للتطبيق، ولا تعدل يدويًا. |
+| agents/windows-recovery/bin/Release/net10.0/win-x64/System.Reflection.Metadata.dll | مخرجات نشر Recovery .NET (agents/windows-recovery/bin) | مكتبة قياسية من .NET 10 لعائلة Reflection Metadata؛ توفر API runtime للتطبيق، ولا تعدل يدويًا. |
+| agents/windows-recovery/bin/Release/net10.0/win-x64/System.Reflection.Primitives.dll | مخرجات نشر Recovery .NET (agents/windows-recovery/bin) | مكتبة قياسية من .NET 10 لعائلة Reflection Primitives؛ توفر API runtime للتطبيق، ولا تعدل يدويًا. |
+| agents/windows-recovery/bin/Release/net10.0/win-x64/System.Reflection.TypeExtensions.dll | مخرجات نشر Recovery .NET (agents/windows-recovery/bin) | مكتبة قياسية من .NET 10 لعائلة Reflection TypeExtensions؛ توفر API runtime للتطبيق، ولا تعدل يدويًا. |
+| agents/windows-recovery/bin/Release/net10.0/win-x64/System.Resources.Reader.dll | مخرجات نشر Recovery .NET (agents/windows-recovery/bin) | مكتبة قياسية من .NET 10 لعائلة Resources Reader؛ توفر API runtime للتطبيق، ولا تعدل يدويًا. |
+| agents/windows-recovery/bin/Release/net10.0/win-x64/System.Resources.ResourceManager.dll | مخرجات نشر Recovery .NET (agents/windows-recovery/bin) | مكتبة قياسية من .NET 10 لعائلة Resources ResourceManager؛ توفر API runtime للتطبيق، ولا تعدل يدويًا. |
+| agents/windows-recovery/bin/Release/net10.0/win-x64/System.Resources.Writer.dll | مخرجات نشر Recovery .NET (agents/windows-recovery/bin) | مكتبة قياسية من .NET 10 لعائلة Resources Writer؛ توفر API runtime للتطبيق، ولا تعدل يدويًا. |
+| agents/windows-recovery/bin/Release/net10.0/win-x64/System.Runtime.CompilerServices.Unsafe.dll | مخرجات نشر Recovery .NET (agents/windows-recovery/bin) | مكتبة قياسية من .NET 10 لعائلة Runtime CompilerServices Unsafe؛ توفر API runtime للتطبيق، ولا تعدل يدويًا. |
+| agents/windows-recovery/bin/Release/net10.0/win-x64/System.Runtime.CompilerServices.VisualC.dll | مخرجات نشر Recovery .NET (agents/windows-recovery/bin) | مكتبة قياسية من .NET 10 لعائلة Runtime CompilerServices VisualC؛ توفر API runtime للتطبيق، ولا تعدل يدويًا. |
+| agents/windows-recovery/bin/Release/net10.0/win-x64/System.Runtime.dll | مخرجات نشر Recovery .NET (agents/windows-recovery/bin) | مكتبة قياسية من .NET 10 لعائلة Runtime؛ توفر API runtime للتطبيق، ولا تعدل يدويًا. |
+| agents/windows-recovery/bin/Release/net10.0/win-x64/System.Runtime.Extensions.dll | مخرجات نشر Recovery .NET (agents/windows-recovery/bin) | مكتبة قياسية من .NET 10 لعائلة Runtime Extensions؛ توفر API runtime للتطبيق، ولا تعدل يدويًا. |
+| agents/windows-recovery/bin/Release/net10.0/win-x64/System.Runtime.Handles.dll | مخرجات نشر Recovery .NET (agents/windows-recovery/bin) | مكتبة قياسية من .NET 10 لعائلة Runtime Handles؛ توفر API runtime للتطبيق، ولا تعدل يدويًا. |
+| agents/windows-recovery/bin/Release/net10.0/win-x64/System.Runtime.InteropServices.dll | مخرجات نشر Recovery .NET (agents/windows-recovery/bin) | مكتبة قياسية من .NET 10 لعائلة Runtime InteropServices؛ توفر API runtime للتطبيق، ولا تعدل يدويًا. |
+| agents/windows-recovery/bin/Release/net10.0/win-x64/System.Runtime.InteropServices.JavaScript.dll | مخرجات نشر Recovery .NET (agents/windows-recovery/bin) | مكتبة قياسية من .NET 10 لعائلة Runtime InteropServices JavaScript؛ توفر API runtime للتطبيق، ولا تعدل يدويًا. |
+| agents/windows-recovery/bin/Release/net10.0/win-x64/System.Runtime.InteropServices.RuntimeInformation.dll | مخرجات نشر Recovery .NET (agents/windows-recovery/bin) | مكتبة قياسية من .NET 10 لعائلة Runtime InteropServices RuntimeInformation؛ توفر API runtime للتطبيق، ولا تعدل يدويًا. |
+| agents/windows-recovery/bin/Release/net10.0/win-x64/System.Runtime.Intrinsics.dll | مخرجات نشر Recovery .NET (agents/windows-recovery/bin) | مكتبة قياسية من .NET 10 لعائلة Runtime Intrinsics؛ توفر API runtime للتطبيق، ولا تعدل يدويًا. |
+| agents/windows-recovery/bin/Release/net10.0/win-x64/System.Runtime.Loader.dll | مخرجات نشر Recovery .NET (agents/windows-recovery/bin) | مكتبة قياسية من .NET 10 لعائلة Runtime Loader؛ توفر API runtime للتطبيق، ولا تعدل يدويًا. |
+| agents/windows-recovery/bin/Release/net10.0/win-x64/System.Runtime.Numerics.dll | مخرجات نشر Recovery .NET (agents/windows-recovery/bin) | مكتبة قياسية من .NET 10 لعائلة Runtime Numerics؛ توفر API runtime للتطبيق، ولا تعدل يدويًا. |
+| agents/windows-recovery/bin/Release/net10.0/win-x64/System.Runtime.Serialization.dll | مخرجات نشر Recovery .NET (agents/windows-recovery/bin) | مكتبة قياسية من .NET 10 لعائلة Runtime Serialization؛ توفر API runtime للتطبيق، ولا تعدل يدويًا. |
+| agents/windows-recovery/bin/Release/net10.0/win-x64/System.Runtime.Serialization.Formatters.dll | مخرجات نشر Recovery .NET (agents/windows-recovery/bin) | مكتبة قياسية من .NET 10 لعائلة Runtime Serialization Formatters؛ توفر API runtime للتطبيق، ولا تعدل يدويًا. |
+| agents/windows-recovery/bin/Release/net10.0/win-x64/System.Runtime.Serialization.Json.dll | مخرجات نشر Recovery .NET (agents/windows-recovery/bin) | مكتبة قياسية من .NET 10 لعائلة Runtime Serialization Json؛ توفر API runtime للتطبيق، ولا تعدل يدويًا. |
+| agents/windows-recovery/bin/Release/net10.0/win-x64/System.Runtime.Serialization.Primitives.dll | مخرجات نشر Recovery .NET (agents/windows-recovery/bin) | مكتبة قياسية من .NET 10 لعائلة Runtime Serialization Primitives؛ توفر API runtime للتطبيق، ولا تعدل يدويًا. |
+| agents/windows-recovery/bin/Release/net10.0/win-x64/System.Runtime.Serialization.Xml.dll | مخرجات نشر Recovery .NET (agents/windows-recovery/bin) | مكتبة قياسية من .NET 10 لعائلة Runtime Serialization Xml؛ توفر API runtime للتطبيق، ولا تعدل يدويًا. |
+| agents/windows-recovery/bin/Release/net10.0/win-x64/System.Security.AccessControl.dll | مخرجات نشر Recovery .NET (agents/windows-recovery/bin) | مكتبة قياسية من .NET 10 لعائلة Security AccessControl؛ توفر API runtime للتطبيق، ولا تعدل يدويًا. |
+| agents/windows-recovery/bin/Release/net10.0/win-x64/System.Security.Claims.dll | مخرجات نشر Recovery .NET (agents/windows-recovery/bin) | مكتبة قياسية من .NET 10 لعائلة Security Claims؛ توفر API runtime للتطبيق، ولا تعدل يدويًا. |
+| agents/windows-recovery/bin/Release/net10.0/win-x64/System.Security.Cryptography.Algorithms.dll | مخرجات نشر Recovery .NET (agents/windows-recovery/bin) | مكتبة قياسية من .NET 10 لعائلة Security Cryptography Algorithms؛ توفر API runtime للتطبيق، ولا تعدل يدويًا. |
+| agents/windows-recovery/bin/Release/net10.0/win-x64/System.Security.Cryptography.Cng.dll | مخرجات نشر Recovery .NET (agents/windows-recovery/bin) | مكتبة قياسية من .NET 10 لعائلة Security Cryptography Cng؛ توفر API runtime للتطبيق، ولا تعدل يدويًا. |
+| agents/windows-recovery/bin/Release/net10.0/win-x64/System.Security.Cryptography.Csp.dll | مخرجات نشر Recovery .NET (agents/windows-recovery/bin) | مكتبة قياسية من .NET 10 لعائلة Security Cryptography Csp؛ توفر API runtime للتطبيق، ولا تعدل يدويًا. |
+| agents/windows-recovery/bin/Release/net10.0/win-x64/System.Security.Cryptography.dll | مخرجات نشر Recovery .NET (agents/windows-recovery/bin) | مكتبة قياسية من .NET 10 لعائلة Security Cryptography؛ توفر API runtime للتطبيق، ولا تعدل يدويًا. |
+| agents/windows-recovery/bin/Release/net10.0/win-x64/System.Security.Cryptography.Encoding.dll | مخرجات نشر Recovery .NET (agents/windows-recovery/bin) | مكتبة قياسية من .NET 10 لعائلة Security Cryptography Encoding؛ توفر API runtime للتطبيق، ولا تعدل يدويًا. |
+| agents/windows-recovery/bin/Release/net10.0/win-x64/System.Security.Cryptography.OpenSsl.dll | مخرجات نشر Recovery .NET (agents/windows-recovery/bin) | مكتبة قياسية من .NET 10 لعائلة Security Cryptography OpenSsl؛ توفر API runtime للتطبيق، ولا تعدل يدويًا. |
+| agents/windows-recovery/bin/Release/net10.0/win-x64/System.Security.Cryptography.Pkcs.dll | مخرجات نشر Recovery .NET (agents/windows-recovery/bin) | مكتبة قياسية من .NET 10 لعائلة Security Cryptography Pkcs؛ توفر API runtime للتطبيق، ولا تعدل يدويًا. |
+| agents/windows-recovery/bin/Release/net10.0/win-x64/System.Security.Cryptography.Primitives.dll | مخرجات نشر Recovery .NET (agents/windows-recovery/bin) | مكتبة قياسية من .NET 10 لعائلة Security Cryptography Primitives؛ توفر API runtime للتطبيق، ولا تعدل يدويًا. |
+| agents/windows-recovery/bin/Release/net10.0/win-x64/System.Security.Cryptography.X509Certificates.dll | مخرجات نشر Recovery .NET (agents/windows-recovery/bin) | مكتبة قياسية من .NET 10 لعائلة Security Cryptography X509Certificates؛ توفر API runtime للتطبيق، ولا تعدل يدويًا. |
+| agents/windows-recovery/bin/Release/net10.0/win-x64/System.Security.Cryptography.Xml.dll | مخرجات نشر Recovery .NET (agents/windows-recovery/bin) | مكتبة قياسية من .NET 10 لعائلة Security Cryptography Xml؛ توفر API runtime للتطبيق، ولا تعدل يدويًا. |
+| agents/windows-recovery/bin/Release/net10.0/win-x64/System.Security.dll | مخرجات نشر Recovery .NET (agents/windows-recovery/bin) | مكتبة قياسية من .NET 10 لعائلة Security؛ توفر API runtime للتطبيق، ولا تعدل يدويًا. |
+| agents/windows-recovery/bin/Release/net10.0/win-x64/System.Security.Principal.dll | مخرجات نشر Recovery .NET (agents/windows-recovery/bin) | مكتبة قياسية من .NET 10 لعائلة Security Principal؛ توفر API runtime للتطبيق، ولا تعدل يدويًا. |
+| agents/windows-recovery/bin/Release/net10.0/win-x64/System.Security.Principal.Windows.dll | مخرجات نشر Recovery .NET (agents/windows-recovery/bin) | مكتبة قياسية من .NET 10 لعائلة Security Principal Windows؛ توفر API runtime للتطبيق، ولا تعدل يدويًا. |
+| agents/windows-recovery/bin/Release/net10.0/win-x64/System.Security.SecureString.dll | مخرجات نشر Recovery .NET (agents/windows-recovery/bin) | مكتبة قياسية من .NET 10 لعائلة Security SecureString؛ توفر API runtime للتطبيق، ولا تعدل يدويًا. |
+| agents/windows-recovery/bin/Release/net10.0/win-x64/System.ServiceModel.Web.dll | مخرجات نشر Recovery .NET (agents/windows-recovery/bin) | مكتبة قياسية من .NET 10 لعائلة ServiceModel Web؛ توفر API runtime للتطبيق، ولا تعدل يدويًا. |
+| agents/windows-recovery/bin/Release/net10.0/win-x64/System.ServiceProcess.dll | مخرجات نشر Recovery .NET (agents/windows-recovery/bin) | مكتبة قياسية من .NET 10 لعائلة ServiceProcess؛ توفر API runtime للتطبيق، ولا تعدل يدويًا. |
+| agents/windows-recovery/bin/Release/net10.0/win-x64/System.ServiceProcess.ServiceController.dll | مخرجات نشر Recovery .NET (agents/windows-recovery/bin) | مكتبة قياسية من .NET 10 لعائلة ServiceProcess ServiceController؛ توفر API runtime للتطبيق، ولا تعدل يدويًا. |
+| agents/windows-recovery/bin/Release/net10.0/win-x64/System.Text.Encoding.CodePages.dll | مخرجات نشر Recovery .NET (agents/windows-recovery/bin) | مكتبة قياسية من .NET 10 لعائلة Text Encoding CodePages؛ توفر API runtime للتطبيق، ولا تعدل يدويًا. |
+| agents/windows-recovery/bin/Release/net10.0/win-x64/System.Text.Encoding.dll | مخرجات نشر Recovery .NET (agents/windows-recovery/bin) | مكتبة قياسية من .NET 10 لعائلة Text Encoding؛ توفر API runtime للتطبيق، ولا تعدل يدويًا. |
+| agents/windows-recovery/bin/Release/net10.0/win-x64/System.Text.Encoding.Extensions.dll | مخرجات نشر Recovery .NET (agents/windows-recovery/bin) | مكتبة قياسية من .NET 10 لعائلة Text Encoding Extensions؛ توفر API runtime للتطبيق، ولا تعدل يدويًا. |
+| agents/windows-recovery/bin/Release/net10.0/win-x64/System.Text.Encodings.Web.dll | مخرجات نشر Recovery .NET (agents/windows-recovery/bin) | مكتبة قياسية من .NET 10 لعائلة Text Encodings Web؛ توفر API runtime للتطبيق، ولا تعدل يدويًا. |
+| agents/windows-recovery/bin/Release/net10.0/win-x64/System.Text.Json.dll | مخرجات نشر Recovery .NET (agents/windows-recovery/bin) | مكتبة قياسية من .NET 10 لعائلة Text Json؛ توفر API runtime للتطبيق، ولا تعدل يدويًا. |
+| agents/windows-recovery/bin/Release/net10.0/win-x64/System.Text.RegularExpressions.dll | مخرجات نشر Recovery .NET (agents/windows-recovery/bin) | مكتبة قياسية من .NET 10 لعائلة Text RegularExpressions؛ توفر API runtime للتطبيق، ولا تعدل يدويًا. |
+| agents/windows-recovery/bin/Release/net10.0/win-x64/System.Threading.AccessControl.dll | مخرجات نشر Recovery .NET (agents/windows-recovery/bin) | مكتبة قياسية من .NET 10 لعائلة Threading AccessControl؛ توفر API runtime للتطبيق، ولا تعدل يدويًا. |
+| agents/windows-recovery/bin/Release/net10.0/win-x64/System.Threading.Channels.dll | مخرجات نشر Recovery .NET (agents/windows-recovery/bin) | مكتبة قياسية من .NET 10 لعائلة Threading Channels؛ توفر API runtime للتطبيق، ولا تعدل يدويًا. |
+| agents/windows-recovery/bin/Release/net10.0/win-x64/System.Threading.dll | مخرجات نشر Recovery .NET (agents/windows-recovery/bin) | مكتبة قياسية من .NET 10 لعائلة Threading؛ توفر API runtime للتطبيق، ولا تعدل يدويًا. |
+| agents/windows-recovery/bin/Release/net10.0/win-x64/System.Threading.Overlapped.dll | مخرجات نشر Recovery .NET (agents/windows-recovery/bin) | مكتبة قياسية من .NET 10 لعائلة Threading Overlapped؛ توفر API runtime للتطبيق، ولا تعدل يدويًا. |
+| agents/windows-recovery/bin/Release/net10.0/win-x64/System.Threading.RateLimiting.dll | مخرجات نشر Recovery .NET (agents/windows-recovery/bin) | مكتبة قياسية من .NET 10 لعائلة Threading RateLimiting؛ توفر API runtime للتطبيق، ولا تعدل يدويًا. |
+| agents/windows-recovery/bin/Release/net10.0/win-x64/System.Threading.Tasks.Dataflow.dll | مخرجات نشر Recovery .NET (agents/windows-recovery/bin) | مكتبة قياسية من .NET 10 لعائلة Threading Tasks Dataflow؛ توفر API runtime للتطبيق، ولا تعدل يدويًا. |
+| agents/windows-recovery/bin/Release/net10.0/win-x64/System.Threading.Tasks.dll | مخرجات نشر Recovery .NET (agents/windows-recovery/bin) | مكتبة قياسية من .NET 10 لعائلة Threading Tasks؛ توفر API runtime للتطبيق، ولا تعدل يدويًا. |
+| agents/windows-recovery/bin/Release/net10.0/win-x64/System.Threading.Tasks.Extensions.dll | مخرجات نشر Recovery .NET (agents/windows-recovery/bin) | مكتبة قياسية من .NET 10 لعائلة Threading Tasks Extensions؛ توفر API runtime للتطبيق، ولا تعدل يدويًا. |
+| agents/windows-recovery/bin/Release/net10.0/win-x64/System.Threading.Tasks.Parallel.dll | مخرجات نشر Recovery .NET (agents/windows-recovery/bin) | مكتبة قياسية من .NET 10 لعائلة Threading Tasks Parallel؛ توفر API runtime للتطبيق، ولا تعدل يدويًا. |
+| agents/windows-recovery/bin/Release/net10.0/win-x64/System.Threading.Thread.dll | مخرجات نشر Recovery .NET (agents/windows-recovery/bin) | مكتبة قياسية من .NET 10 لعائلة Threading Thread؛ توفر API runtime للتطبيق، ولا تعدل يدويًا. |
+| agents/windows-recovery/bin/Release/net10.0/win-x64/System.Threading.ThreadPool.dll | مخرجات نشر Recovery .NET (agents/windows-recovery/bin) | مكتبة قياسية من .NET 10 لعائلة Threading ThreadPool؛ توفر API runtime للتطبيق، ولا تعدل يدويًا. |
+| agents/windows-recovery/bin/Release/net10.0/win-x64/System.Threading.Timer.dll | مخرجات نشر Recovery .NET (agents/windows-recovery/bin) | مكتبة قياسية من .NET 10 لعائلة Threading Timer؛ توفر API runtime للتطبيق، ولا تعدل يدويًا. |
+| agents/windows-recovery/bin/Release/net10.0/win-x64/System.Transactions.dll | مخرجات نشر Recovery .NET (agents/windows-recovery/bin) | مكتبة قياسية من .NET 10 لعائلة Transactions؛ توفر API runtime للتطبيق، ولا تعدل يدويًا. |
+| agents/windows-recovery/bin/Release/net10.0/win-x64/System.Transactions.Local.dll | مخرجات نشر Recovery .NET (agents/windows-recovery/bin) | مكتبة قياسية من .NET 10 لعائلة Transactions Local؛ توفر API runtime للتطبيق، ولا تعدل يدويًا. |
+| agents/windows-recovery/bin/Release/net10.0/win-x64/System.ValueTuple.dll | مخرجات نشر Recovery .NET (agents/windows-recovery/bin) | مكتبة قياسية من .NET 10 لعائلة ValueTuple؛ توفر API runtime للتطبيق، ولا تعدل يدويًا. |
+| agents/windows-recovery/bin/Release/net10.0/win-x64/System.Web.dll | مخرجات نشر Recovery .NET (agents/windows-recovery/bin) | مكتبة قياسية من .NET 10 لعائلة Web؛ توفر API runtime للتطبيق، ولا تعدل يدويًا. |
+| agents/windows-recovery/bin/Release/net10.0/win-x64/System.Web.HttpUtility.dll | مخرجات نشر Recovery .NET (agents/windows-recovery/bin) | مكتبة قياسية من .NET 10 لعائلة Web HttpUtility؛ توفر API runtime للتطبيق، ولا تعدل يدويًا. |
+| agents/windows-recovery/bin/Release/net10.0/win-x64/System.Windows.dll | مخرجات نشر Recovery .NET (agents/windows-recovery/bin) | مكتبة قياسية من .NET 10 لعائلة Windows؛ توفر API runtime للتطبيق، ولا تعدل يدويًا. |
+| agents/windows-recovery/bin/Release/net10.0/win-x64/System.Xml.dll | مخرجات نشر Recovery .NET (agents/windows-recovery/bin) | مكتبة قياسية من .NET 10 لعائلة Xml؛ توفر API runtime للتطبيق، ولا تعدل يدويًا. |
+| agents/windows-recovery/bin/Release/net10.0/win-x64/System.Xml.Linq.dll | مخرجات نشر Recovery .NET (agents/windows-recovery/bin) | مكتبة قياسية من .NET 10 لعائلة Xml Linq؛ توفر API runtime للتطبيق، ولا تعدل يدويًا. |
+| agents/windows-recovery/bin/Release/net10.0/win-x64/System.Xml.ReaderWriter.dll | مخرجات نشر Recovery .NET (agents/windows-recovery/bin) | مكتبة قياسية من .NET 10 لعائلة Xml ReaderWriter؛ توفر API runtime للتطبيق، ولا تعدل يدويًا. |
+| agents/windows-recovery/bin/Release/net10.0/win-x64/System.Xml.Serialization.dll | مخرجات نشر Recovery .NET (agents/windows-recovery/bin) | مكتبة قياسية من .NET 10 لعائلة Xml Serialization؛ توفر API runtime للتطبيق، ولا تعدل يدويًا. |
+| agents/windows-recovery/bin/Release/net10.0/win-x64/System.Xml.XDocument.dll | مخرجات نشر Recovery .NET (agents/windows-recovery/bin) | مكتبة قياسية من .NET 10 لعائلة Xml XDocument؛ توفر API runtime للتطبيق، ولا تعدل يدويًا. |
+| agents/windows-recovery/bin/Release/net10.0/win-x64/System.Xml.XmlDocument.dll | مخرجات نشر Recovery .NET (agents/windows-recovery/bin) | مكتبة قياسية من .NET 10 لعائلة Xml XmlDocument؛ توفر API runtime للتطبيق، ولا تعدل يدويًا. |
+| agents/windows-recovery/bin/Release/net10.0/win-x64/System.Xml.XmlSerializer.dll | مخرجات نشر Recovery .NET (agents/windows-recovery/bin) | مكتبة قياسية من .NET 10 لعائلة Xml XmlSerializer؛ توفر API runtime للتطبيق، ولا تعدل يدويًا. |
+| agents/windows-recovery/bin/Release/net10.0/win-x64/System.Xml.XPath.dll | مخرجات نشر Recovery .NET (agents/windows-recovery/bin) | مكتبة قياسية من .NET 10 لعائلة Xml XPath؛ توفر API runtime للتطبيق، ولا تعدل يدويًا. |
+| agents/windows-recovery/bin/Release/net10.0/win-x64/System.Xml.XPath.XDocument.dll | مخرجات نشر Recovery .NET (agents/windows-recovery/bin) | مكتبة قياسية من .NET 10 لعائلة Xml XPath XDocument؛ توفر API runtime للتطبيق، ولا تعدل يدويًا. |
+| agents/windows-recovery/bin/Release/net10.0/win-x64/WindowsBase.dll | مخرجات نشر Recovery .NET (agents/windows-recovery/bin) | مكتبة قياسية من .NET 10 لعائلة WindowsBase؛ توفر API runtime للتطبيق، ولا تعدل يدويًا. |
+| agents/windows-recovery/config.example.json | agents/windows-recovery | قالب إعداد Recovery يبين أسماء الخيارات مثل نطاق الحماية ومجلد النسخ والخادم؛ لا يحتوي enrollment token حقيقي. |
+| agents/windows-recovery/FileGuard.Recovery.csproj | agents/windows-recovery | ملف مشروع .NET الذي يحدد الهدف net10.0 واعتمادات Windows Service وقواعد التحذير والبناء. |
+| agents/windows-recovery/Install-RecoveryPilot.ps1 | agents/windows-recovery | إعداد خدمة/معمل Recovery لويندوز؛ افحص النطاق والمسارات قبل تشغيله لأنه ينشئ خدمة وملفات تشغيل. |
+| agents/windows-recovery/obj/FileGuard.Recovery.csproj.nuget.dgspec.json | ملفات بناء وسيطة لـ Recovery (agents/windows-recovery/obj) | ملف MSBuild/NuGet مولّد يثبت اعتماديات وخصائص بناء المشروع لهذا الجهاز؛ يمكن إعادة توليده باستعادة الحزم والبناء. |
+| agents/windows-recovery/obj/FileGuard.Recovery.csproj.nuget.g.props | ملفات بناء وسيطة لـ Recovery (agents/windows-recovery/obj) | إعدادات build مولّدة من NuGet/MSBuild لتمرير خصائص الحزم والمترجم؛ لا تعدلها يدويًا. |
+| agents/windows-recovery/obj/FileGuard.Recovery.csproj.nuget.g.targets | ملفات بناء وسيطة لـ Recovery (agents/windows-recovery/obj) | إعدادات build مولّدة من NuGet/MSBuild لتمرير خصائص الحزم والمترجم؛ لا تعدلها يدويًا. |
+| agents/windows-recovery/obj/project.assets.json | ملفات بناء وسيطة لـ Recovery (agents/windows-recovery/obj) | ملف MSBuild/NuGet مولّد يثبت اعتماديات وخصائص بناء المشروع لهذا الجهاز؛ يمكن إعادة توليده باستعادة الحزم والبناء. |
+| agents/windows-recovery/obj/project.nuget.cache | ملفات بناء وسيطة لـ Recovery (agents/windows-recovery/obj) | علامة ذاكرة مؤقتة يستخدمها MSBuild لتحديد ما إذا كان يحتاج إعادة البناء؛ يمكن إعادة توليدها. |
+| agents/windows-recovery/obj/Release/net10.0/.NETCoreApp,Version=v10.0.AssemblyAttributes.cs | ملفات بناء وسيطة لـ Recovery (agents/windows-recovery/obj) | مصدر C# مولّد آليًا أثناء البناء (سمات الإصدار أو using عامة)، وليس نقطة تعديل للمنطق؛ عدّل Program.cs/RecoveryEngine.cs. |
+| agents/windows-recovery/obj/Release/net10.0/apphost.exe | ملفات بناء وسيطة لـ Recovery (agents/windows-recovery/obj) | ملف host وسيط ولّده .NET أثناء البناء لبدء التطبيق على Windows. |
+| agents/windows-recovery/obj/Release/net10.0/FileGuar.569F59E8.Up2Date | ملفات بناء وسيطة لـ Recovery (agents/windows-recovery/obj) | ملف وسيط ولّده MSBuild أثناء بناء .NET؛ ليس مصدرًا يدويًا ولا يلزم حفظه في نسخة مصدر نظيفة. |
+| agents/windows-recovery/obj/Release/net10.0/FileGuard.Recovery.AssemblyInfo.cs | ملفات بناء وسيطة لـ Recovery (agents/windows-recovery/obj) | مصدر C# مولّد آليًا أثناء البناء (سمات الإصدار أو using عامة)، وليس نقطة تعديل للمنطق؛ عدّل Program.cs/RecoveryEngine.cs. |
+| agents/windows-recovery/obj/Release/net10.0/FileGuard.Recovery.AssemblyInfoInputs.cache | ملفات بناء وسيطة لـ Recovery (agents/windows-recovery/obj) | علامة ذاكرة مؤقتة يستخدمها MSBuild لتحديد ما إذا كان يحتاج إعادة البناء؛ يمكن إعادة توليدها. |
+| agents/windows-recovery/obj/Release/net10.0/FileGuard.Recovery.assets.cache | ملفات بناء وسيطة لـ Recovery (agents/windows-recovery/obj) | علامة ذاكرة مؤقتة يستخدمها MSBuild لتحديد ما إذا كان يحتاج إعادة البناء؛ يمكن إعادة توليدها. |
+| agents/windows-recovery/obj/Release/net10.0/FileGuard.Recovery.csproj.AssemblyReference.cache | ملفات بناء وسيطة لـ Recovery (agents/windows-recovery/obj) | علامة ذاكرة مؤقتة يستخدمها MSBuild لتحديد ما إذا كان يحتاج إعادة البناء؛ يمكن إعادة توليدها. |
+| agents/windows-recovery/obj/Release/net10.0/FileGuard.Recovery.csproj.CoreCompileInputs.cache | ملفات بناء وسيطة لـ Recovery (agents/windows-recovery/obj) | علامة ذاكرة مؤقتة يستخدمها MSBuild لتحديد ما إذا كان يحتاج إعادة البناء؛ يمكن إعادة توليدها. |
+| agents/windows-recovery/obj/Release/net10.0/FileGuard.Recovery.csproj.FileListAbsolute.txt | ملفات بناء وسيطة لـ Recovery (agents/windows-recovery/obj) | ملف وسيط ولّده MSBuild أثناء بناء .NET؛ ليس مصدرًا يدويًا ولا يلزم حفظه في نسخة مصدر نظيفة. |
+| agents/windows-recovery/obj/Release/net10.0/FileGuard.Recovery.dll | ملفات بناء وسيطة لـ Recovery (agents/windows-recovery/obj) | نسخة DLL المترجمة من منطق Recovery الخاص بالمشروع؛ الناتج قابل للتشغيل فقط مع إعداداته واعتماداته، والتعديل يكون في ملفات .cs ثم إعادة البناء. |
+| agents/windows-recovery/obj/Release/net10.0/FileGuard.Recovery.GeneratedMSBuildEditorConfig.editorconfig | ملفات بناء وسيطة لـ Recovery (agents/windows-recovery/obj) | ملف وسيط ولّده MSBuild أثناء بناء .NET؛ ليس مصدرًا يدويًا ولا يلزم حفظه في نسخة مصدر نظيفة. |
+| agents/windows-recovery/obj/Release/net10.0/FileGuard.Recovery.genruntimeconfig.cache | ملفات بناء وسيطة لـ Recovery (agents/windows-recovery/obj) | علامة ذاكرة مؤقتة يستخدمها MSBuild لتحديد ما إذا كان يحتاج إعادة البناء؛ يمكن إعادة توليدها. |
+| agents/windows-recovery/obj/Release/net10.0/FileGuard.Recovery.GlobalUsings.g.cs | ملفات بناء وسيطة لـ Recovery (agents/windows-recovery/obj) | مصدر C# مولّد آليًا أثناء البناء (سمات الإصدار أو using عامة)، وليس نقطة تعديل للمنطق؛ عدّل Program.cs/RecoveryEngine.cs. |
+| agents/windows-recovery/obj/Release/net10.0/FileGuard.Recovery.pdb | ملفات بناء وسيطة لـ Recovery (agents/windows-recovery/obj) | رموز تصحيح مولدة تربط التطبيق المترجم بمواقع المصدر؛ ليست ملف تشغيل مستقلًا. |
+| agents/windows-recovery/obj/Release/net10.0/ref/FileGuard.Recovery.dll | ملفات بناء وسيطة لـ Recovery (agents/windows-recovery/obj) | نسخة DLL المترجمة من منطق Recovery الخاص بالمشروع؛ الناتج قابل للتشغيل فقط مع إعداداته واعتماداته، والتعديل يكون في ملفات .cs ثم إعادة البناء. |
+| agents/windows-recovery/obj/Release/net10.0/refint/FileGuard.Recovery.dll | ملفات بناء وسيطة لـ Recovery (agents/windows-recovery/obj) | نسخة DLL المترجمة من منطق Recovery الخاص بالمشروع؛ الناتج قابل للتشغيل فقط مع إعداداته واعتماداته، والتعديل يكون في ملفات .cs ثم إعادة البناء. |
+| agents/windows-recovery/obj/Release/net10.0/win-x64/.NETCoreApp,Version=v10.0.AssemblyAttributes.cs | ملفات بناء وسيطة لـ Recovery (agents/windows-recovery/obj) | مصدر C# مولّد آليًا أثناء البناء (سمات الإصدار أو using عامة)، وليس نقطة تعديل للمنطق؛ عدّل Program.cs/RecoveryEngine.cs. |
+| agents/windows-recovery/obj/Release/net10.0/win-x64/apphost.exe | ملفات بناء وسيطة لـ Recovery (agents/windows-recovery/obj) | ملف host وسيط ولّده .NET أثناء البناء لبدء التطبيق على Windows. |
+| agents/windows-recovery/obj/Release/net10.0/win-x64/FileGuar.569F59E8.Up2Date | ملفات بناء وسيطة لـ Recovery (agents/windows-recovery/obj) | ملف وسيط ولّده MSBuild أثناء بناء .NET؛ ليس مصدرًا يدويًا ولا يلزم حفظه في نسخة مصدر نظيفة. |
+| agents/windows-recovery/obj/Release/net10.0/win-x64/FileGuard.Recovery.AssemblyInfo.cs | ملفات بناء وسيطة لـ Recovery (agents/windows-recovery/obj) | مصدر C# مولّد آليًا أثناء البناء (سمات الإصدار أو using عامة)، وليس نقطة تعديل للمنطق؛ عدّل Program.cs/RecoveryEngine.cs. |
+| agents/windows-recovery/obj/Release/net10.0/win-x64/FileGuard.Recovery.AssemblyInfoInputs.cache | ملفات بناء وسيطة لـ Recovery (agents/windows-recovery/obj) | علامة ذاكرة مؤقتة يستخدمها MSBuild لتحديد ما إذا كان يحتاج إعادة البناء؛ يمكن إعادة توليدها. |
+| agents/windows-recovery/obj/Release/net10.0/win-x64/FileGuard.Recovery.assets.cache | ملفات بناء وسيطة لـ Recovery (agents/windows-recovery/obj) | علامة ذاكرة مؤقتة يستخدمها MSBuild لتحديد ما إذا كان يحتاج إعادة البناء؛ يمكن إعادة توليدها. |
+| agents/windows-recovery/obj/Release/net10.0/win-x64/FileGuard.Recovery.csproj.AssemblyReference.cache | ملفات بناء وسيطة لـ Recovery (agents/windows-recovery/obj) | علامة ذاكرة مؤقتة يستخدمها MSBuild لتحديد ما إذا كان يحتاج إعادة البناء؛ يمكن إعادة توليدها. |
+| agents/windows-recovery/obj/Release/net10.0/win-x64/FileGuard.Recovery.csproj.CoreCompileInputs.cache | ملفات بناء وسيطة لـ Recovery (agents/windows-recovery/obj) | علامة ذاكرة مؤقتة يستخدمها MSBuild لتحديد ما إذا كان يحتاج إعادة البناء؛ يمكن إعادة توليدها. |
+| agents/windows-recovery/obj/Release/net10.0/win-x64/FileGuard.Recovery.csproj.FileListAbsolute.txt | ملفات بناء وسيطة لـ Recovery (agents/windows-recovery/obj) | ملف وسيط ولّده MSBuild أثناء بناء .NET؛ ليس مصدرًا يدويًا ولا يلزم حفظه في نسخة مصدر نظيفة. |
+| agents/windows-recovery/obj/Release/net10.0/win-x64/FileGuard.Recovery.dll | ملفات بناء وسيطة لـ Recovery (agents/windows-recovery/obj) | نسخة DLL المترجمة من منطق Recovery الخاص بالمشروع؛ الناتج قابل للتشغيل فقط مع إعداداته واعتماداته، والتعديل يكون في ملفات .cs ثم إعادة البناء. |
+| agents/windows-recovery/obj/Release/net10.0/win-x64/FileGuard.Recovery.GeneratedMSBuildEditorConfig.editorconfig | ملفات بناء وسيطة لـ Recovery (agents/windows-recovery/obj) | ملف وسيط ولّده MSBuild أثناء بناء .NET؛ ليس مصدرًا يدويًا ولا يلزم حفظه في نسخة مصدر نظيفة. |
+| agents/windows-recovery/obj/Release/net10.0/win-x64/FileGuard.Recovery.genruntimeconfig.cache | ملفات بناء وسيطة لـ Recovery (agents/windows-recovery/obj) | علامة ذاكرة مؤقتة يستخدمها MSBuild لتحديد ما إذا كان يحتاج إعادة البناء؛ يمكن إعادة توليدها. |
+| agents/windows-recovery/obj/Release/net10.0/win-x64/FileGuard.Recovery.GlobalUsings.g.cs | ملفات بناء وسيطة لـ Recovery (agents/windows-recovery/obj) | مصدر C# مولّد آليًا أثناء البناء (سمات الإصدار أو using عامة)، وليس نقطة تعديل للمنطق؛ عدّل Program.cs/RecoveryEngine.cs. |
+| agents/windows-recovery/obj/Release/net10.0/win-x64/FileGuard.Recovery.pdb | ملفات بناء وسيطة لـ Recovery (agents/windows-recovery/obj) | رموز تصحيح مولدة تربط التطبيق المترجم بمواقع المصدر؛ ليست ملف تشغيل مستقلًا. |
+| agents/windows-recovery/obj/Release/net10.0/win-x64/PublishOutputs.3db33a03c3.txt | ملفات بناء وسيطة لـ Recovery (agents/windows-recovery/obj) | ملف وسيط ولّده MSBuild أثناء بناء .NET؛ ليس مصدرًا يدويًا ولا يلزم حفظه في نسخة مصدر نظيفة. |
+| agents/windows-recovery/obj/Release/net10.0/win-x64/ref/FileGuard.Recovery.dll | ملفات بناء وسيطة لـ Recovery (agents/windows-recovery/obj) | نسخة DLL المترجمة من منطق Recovery الخاص بالمشروع؛ الناتج قابل للتشغيل فقط مع إعداداته واعتماداته، والتعديل يكون في ملفات .cs ثم إعادة البناء. |
+| agents/windows-recovery/obj/Release/net10.0/win-x64/refint/FileGuard.Recovery.dll | ملفات بناء وسيطة لـ Recovery (agents/windows-recovery/obj) | نسخة DLL المترجمة من منطق Recovery الخاص بالمشروع؛ الناتج قابل للتشغيل فقط مع إعداداته واعتماداته، والتعديل يكون في ملفات .cs ثم إعادة البناء. |
+| agents/windows-recovery/Program.cs | agents/windows-recovery | نقطة بدء Recovery worker: تحميل الإعداد، تسجيل الخدمات في Generic Host، والتشغيل كخدمة Windows أو عملية foreground. |
+| agents/windows-recovery/README.md | agents/windows-recovery | تعليمات بناء وإعداد وتجربة عامل Recovery وحدود استخدامه التجريبي. |
+| agents/windows-recovery/Recovery-PilotTools.ps1 | agents/windows-recovery | أوامر مساعدة لتجربة وإدارة Recovery Pilot في بيئة مختبر. |
+| agents/windows-recovery/RecoveryEngine.cs | agents/windows-recovery | منطق النسخ المحلي: يتأكد من النطاق الآمن، ينتظر استقرار الملف، يحسب SHA-256، يحفظ manifest وoutbox، ويمكنه استرجاعًا بعد الحذف دون overwrite إذا فُعّل صراحة. |
+| agents/windows-recovery/Set-RecoveryPilotMode.ps1 | agents/windows-recovery | يضبط وضع عامل Recovery بين المراقبة والاسترجاع وفق إعدادات المعمل. |
+| agents/windows-recovery/Test-RecoveryPilot.ps1 | agents/windows-recovery | سيناريوهات تحقق يدوية للـ Recovery Pilot باستخدام بيانات تجريبية. |
+| apps/console/dist/agents/linux-agent.zip | واجهة React بعد البناء (apps/console/dist) | نسخة حزمة Agent مرفقة في ملفات البناء وتقدمها الواجهة للتنزيل. |
+| apps/console/dist/agents/windows-agent.zip | واجهة React بعد البناء (apps/console/dist) | نسخة حزمة Agent مرفقة في ملفات البناء وتقدمها الواجهة للتنزيل. |
+| apps/console/dist/assets/index-BqKnJS2m.js | واجهة React بعد البناء (apps/console/dist) | ملف JavaScript مضغوط ومجمّع من src/ لبناء React؛ عدل المصدر وأعد npm run build بدل هذا الناتج. |
+| apps/console/dist/assets/index-DLHE7RRE.css | واجهة React بعد البناء (apps/console/dist) | ملف CSS مضغوط ناتج من style.css واعتمادات الواجهة. |
+| apps/console/dist/assets/inter-cyrillic-ext-wght-normal-BOeWTOD4.woff2 | واجهة React بعد البناء (apps/console/dist) | ملف خط ويب cyrillic مجمّع مع الواجهة، لدعم النصوص المعروضة دون اتصال بخدمة خطوط خارجية. |
+| apps/console/dist/assets/inter-cyrillic-wght-normal-DqGufNeO.woff2 | واجهة React بعد البناء (apps/console/dist) | ملف خط ويب cyrillic مجمّع مع الواجهة، لدعم النصوص المعروضة دون اتصال بخدمة خطوط خارجية. |
+| apps/console/dist/assets/inter-greek-ext-wght-normal-DlzME5K_.woff2 | واجهة React بعد البناء (apps/console/dist) | ملف خط ويب greek مجمّع مع الواجهة، لدعم النصوص المعروضة دون اتصال بخدمة خطوط خارجية. |
+| apps/console/dist/assets/inter-greek-wght-normal-CkhJZR-_.woff2 | واجهة React بعد البناء (apps/console/dist) | ملف خط ويب greek مجمّع مع الواجهة، لدعم النصوص المعروضة دون اتصال بخدمة خطوط خارجية. |
+| apps/console/dist/assets/inter-latin-ext-wght-normal-DO1Apj_S.woff2 | واجهة React بعد البناء (apps/console/dist) | ملف خط ويب latin مجمّع مع الواجهة، لدعم النصوص المعروضة دون اتصال بخدمة خطوط خارجية. |
+| apps/console/dist/assets/inter-latin-wght-normal-Dx4kXJAl.woff2 | واجهة React بعد البناء (apps/console/dist) | ملف خط ويب latin مجمّع مع الواجهة، لدعم النصوص المعروضة دون اتصال بخدمة خطوط خارجية. |
+| apps/console/dist/assets/inter-vietnamese-wght-normal-CBcvBZtf.woff2 | واجهة React بعد البناء (apps/console/dist) | ملف خط ويب vietnamese مجمّع مع الواجهة، لدعم النصوص المعروضة دون اتصال بخدمة خطوط خارجية. |
+| apps/console/dist/favicon.svg | واجهة React بعد البناء (apps/console/dist) | أيقونة متصفح من ملفات الواجهة العامة تم نسخها إلى مخرجات البناء. |
+| apps/console/dist/index.html | واجهة React بعد البناء (apps/console/dist) | ملف HTML النهائي الذي يشير إلى حزم JS/CSS المولدة ليبدأ React في المتصفح. |
+| apps/console/index.html | apps/console | غلاف صفحة React؛ يحدد عنوان الصفحة وعنصر الجذر الذي يركب التطبيق عليه. |
+| apps/console/package-lock.json | apps/console | قفل نسخ npm الدقيقة لكل الاعتمادات المتداخلة حتى ينتج تثبيت قابل للتكرار. |
+| apps/console/package.json | apps/console | بيانات لوحة React وأوامر npm واعتمادها المباشر مثل Vite وTypeScript. |
+| apps/console/public/agents/linux-agent.zip | apps/console | حزمة توزيع Agent لينكس التي تقدمها الواجهة للتنزيل؛ تحقق من مصدرها وإعدادها قبل تثبيت أي جهاز. |
+| apps/console/public/agents/windows-agent.zip | apps/console | حزمة توزيع Agent ويندوز التي تقدمها الواجهة للتنزيل؛ لا تحتوي بحد ذاتها سياسة تمنع الحذف. |
+| apps/console/public/favicon.svg | apps/console | أيقونة SVG صغيرة تظهر في تبويب المتصفح. |
+| apps/console/src/api.ts | apps/console | عميل HTTP مشترك للواجهة: يرسل الطلبات للـ API، يضيف CSRF عند الحاجة، ويحول أخطاء الشبكة والتواريخ. |
+| apps/console/src/main.tsx | apps/console | المكون الرئيسي للوحة React والتنقل والصفحات مثل Overview وDevices وActivity وShares وAudit وSystem. |
+| apps/console/src/Recovery.tsx | apps/console | واجهة حالة Recovery؛ تطلب بيانات العامل والإصدارات والأحداث من API وتعرضها للمسؤول. |
+| apps/console/src/style.css | apps/console | ألوان وتخطيط واستجابة شاشة لوحة React؛ عدل المصدر هنا ثم أعد بناء dist. |
+| apps/console/src/Uploads.tsx | apps/console | مكونات طلب رفع الملفات وحالة الموافقة والتنزيل؛ الميزة اختيارية وليست مزامنة تلقائية للمشاركة. |
+| apps/console/tsconfig.json | apps/console | إعدادات مترجم TypeScript ومجلداته وقواعد نوع بيانات الواجهة. |
+| apps/console/tsconfig.tsbuildinfo | apps/console | ذاكرة مؤقتة لمترجم TypeScript لتسريع البناء؛ ليست مصدرًا ولا تعدلها يدويًا. |
+| apps/console/vite.config.ts | apps/console | إعداد Vite لخادم التطوير وتجميع ملفات الواجهة إلى مجلد dist. |
+| Caddyfile | ملفات الجذر والتقارير | إعداد Caddy قديم/اختياري لبوابة الويب؛ لا يلزم لوضع LAN مباشر، ويجب عدم افتراض أنه شغال لمجرد وجوده. |
+| compose.local-lan.yml | ملفات الجذر والتقارير | تجاوز Docker اختياري لربط الواجهة بشبكة LAN؛ يفتح الوصول وفق العناوين المحددة، فراجعه قبل الاستخدام. |
+| compose.local.yml | ملفات الجذر والتقارير | تجاوز تشغيل محلي يربط الخدمات على loopback لتجربة نفس الكمبيوتر. |
+| compose.production.yml | ملفات الجذر والتقارير | مثال Compose للنشر الإنتاجي مع HTTPS وإعدادات أكثر صرامة؛ يحتاج أسرارًا وشهادة ومراجعة تشغيل. |
+| deploy/containers/Caddyfile | deploy/containers | إعداد بوابة HTTPS باستخدام Caddy في نشر الحاويات. |
+| deploy/containers/Caddyfile.local | deploy/containers | إعداد Caddy لشهادة محلية في بيئة التطوير؛ العملاء يحتاجون الوثوق بالـ CA. |
+| deploy/containers/Dockerfile.frontend | deploy/containers | يبني React في مرحلة ثم يجهز أصول الواجهة لخدمة Nginx. |
+| deploy/containers/Dockerfile.frontend.runtime | deploy/containers | صورة تشغيل واجهة أخف تقدم ملفات React المبنية بدل تثبيت أدوات التطوير. |
+| deploy/containers/nginx.conf | deploy/containers | إعداد Nginx لتقديم الواجهة الثابتة وتمرير طلبات API وإضافة ترويسات HTTP. |
+| deploy/local/Docker-Tools.ps1 | deploy/local | يتحقق أو يهيئ أدوات Docker على جهاز Windows المحلي. |
+| deploy/local/Enable-LanAgents.ps1 | deploy/local | مساعد يجهز عنوان الوصول للـ Agents عبر LAN؛ لا يضبط الشبكة أو جدار الحماية دون مراجعة. |
+| deploy/local/Install-ThisPC.ps1 | deploy/local | مسار تثبيت وتجربة على الكمبيوتر الحالي، مناسب للـ pilot بعد ضبط إعدادات المشروع. |
+| deploy/local/Local-Permissions.ps1 | deploy/local | يفحص أو يضبط صلاحيات ملفات التشغيل المحلية حسب نموذج المعمل. |
+| deploy/local/Show-Login.ps1 | deploy/local | يشغل/يفتح مسار تسجيل الدخول للكونسول المحلي. |
+| deploy/windows/Enable-DirectHttps.ps1 | deploy/windows | ينقل runtime ويندوز إلى HTTPS مباشر، مع نسخ إعدادات قبل التعديل وفحص health endpoint. |
+| deploy/windows/hospital-profile.example.json | deploy/windows | مثال غير سري لإعداد ملف تعريف بيئة Windows والمضيف والخيارات. |
+| deploy/windows/hospital-shares.example.csv | deploy/windows | مثال جدولي للمشاركة ومسارها ونطاق المراقبة؛ أسماء الصفوف تجريبية. |
+| deploy/windows/HOSPITAL_SETUP.md | deploy/windows | دليل تجهيز ملف تعريف بيئة المستشفى والمشاركات وعناصر ما قبل النشر. |
+| deploy/windows/Install-Console.ps1 | deploy/windows | يثبت مكونات الكونسول على Windows ويهيئ Python والبيئة وقاعدة البيانات ومهام التشغيل. |
+| deploy/windows/issue_server_certificate.py | deploy/windows | ينشئ شهادة خادم من CA جاهزة للاستخدام الداخلي؛ المفتاح الخاص يظل سريًا على الخادم. |
+| deploy/windows/mysql/create-database.sql | deploy/windows | ينشئ قاعدة ومستخدم MySQL للمشروع مع صلاحيات تشغيل محدودة. |
+| deploy/windows/mysql/inspect.sql | deploy/windows | استعلامات قراءة لمراجعة وجود قواعد وجداول MySQL وإعدادها. |
+| deploy/windows/mysql/WORKBENCH.md | deploy/windows | تعليمات تشغيل وفحص إعداد MySQL لوضع Windows. |
+| deploy/windows/run_runtime.py | deploy/windows | مشغل الويب المحلي؛ يقرأ البيئة ويبدأ خادم Python مع TLS عند تزويده بالشهادة والمفتاح. |
+| deploy/windows/schema.mysql.sql | deploy/windows | مخطط MySQL مستقل لجداول المشروع وفهارسه. |
+| deploy/windows/Start-ConsoleProcess.ps1 | deploy/windows | يشغل عملية الكونسول بصورة مستقلة في إعداد Windows. |
+| deploy/windows/Start-HospitalSetup.ps1 | deploy/windows | مساعد بداية لجمع إعدادات البيئة ثم تجهيز ملفات وصف مشاركة. |
+| deploy/windows/Test-HospitalReadiness.ps1 | deploy/windows | يفحص متطلبات جاهزية Windows/المجال/المشاركة قبل نشر pilot. |
+| docker-compose.yml | ملفات الجذر والتقارير | التعريف الأساسي للخدمات: قاعدة البيانات، تهيئة المخطط، Flask console/API، worker، frontend ومعمل Agent. |
+| Dockerfile | ملفات الجذر والتقارير | يبني صورة backend Python ويشغل التطبيق من خلال Gunicorn. |
+| docs/ARCHITECTURE.md | docs/ARCHITECTURE.md | شرح مكونات النظام وتدفق الاتصال وحدود فصل الخدمات. |
+| docs/BEGINNER-GUIDE-AR.md | حزمة الشرح العربية | دليل عربي يشرح البنية والبيانات والملفات والاختبارات للمبتدئ. |
+| docs/DOMAIN-PILOT-NO-DELETE.md | docs/DOMAIN-PILOT-NO-DELETE.md | خطة pilot لمراقبة أحداث الحذف في مجال Windows؛ الاسم يشير لعدم المنع، فهو توثيق تجربة لا ACL. |
+| docs/FILESERVER-VM-PILOT.md | docs/FILESERVER-VM-PILOT.md | تصميم تشغيل الكونسول على VM ومراقبة خادم ملفات منفصل عبر LAN. |
+| docs/FILESHARE-EVENT-ATTRIBUTION.md | docs/FILESHARE-EVENT-ATTRIBUTION.md | شرح مصادر اسم الحساب والجهاز عند ربط أحداث SMB وكيفية التعامل مع IP المتغير أو الملتبس. |
+| docs/LOCAL-PC.md | docs/LOCAL-PC.md | مرجع تشغيل ومراقبة على جهاز محلي للتجربة. |
+| docs/LOCAL-WINDOWS.md | docs/LOCAL-WINDOWS.md | تعليمات بيئة Windows محلية وتشغيل الخدمات والـ Agent. |
+| docs/MANUAL-RECOVERY-PILOT.md | docs/MANUAL-RECOVERY-PILOT.md | خطوات Recovery يدوي وآمن داخل معمل بملفات غير مهمة. |
+| docs/MICROSERVICES.md | docs/MICROSERVICES.md | وصف تقسيم الخدمات في التصميم السابق؛ بعض تفاصيله قد تكون تاريخية فراجعه مقابل Compose الحالي. |
+| docs/PROJECT-PLAN.md | docs/PROJECT-PLAN.md | خطة مقترحة لمراحل المشروع وميزات مستقبلية، وليست إثباتًا أن كل ميزة منفذة. |
+| docs/REFERENCE-PROJECT-REVIEW.md | docs/REFERENCE-PROJECT-REVIEW.md | مراجعة المشروع المرجعي ومقارنة الميزات التي يمكن تبنيها. |
+| docs/ROADMAP.md | docs/ROADMAP.md | قائمة مراحل وميزات مستقبلية، تفصل بين المنفذ والمخطط. |
+| docs/screenshots/recovery.png | docs/screenshots | لقطة توضيحية قديمة لواجهة Recovery، وليست دليلًا أن عاملًا حقيقيًا متصل. |
+| docs/VALIDATION.md | docs/VALIDATION.md | إرشادات ما الذي يجب التحقق منه قبل اعتبار نسخة جاهزة. |
+| docs/WINDOWS_DEPLOYMENT.md | docs/WINDOWS_DEPLOYMENT.md | مسار نشر Windows وشهادة وخدمة؛ راجع التعارض مع الإعداد الحالي قبل اتباع خطوات قديمة. |
+| docs/WORKBENCH.md | docs/WORKBENCH.md | ملاحظات تجهيز مختبر التطوير والأدوات والاختبارات. |
+| init_db.py | ملفات الجذر والتقارير | أداة تهيئة قاعدة بيانات أقدم للمشروع؛ تحقق هل ما زالت مستخدمة قبل اختيارها بدل configure_stack. |
+| NileHope-FileGuard-Deployment-Report-2026-11-19.md | ملفات الجذر والتقارير | تقرير حالة النشر وقت إعداده؛ هو سجل تقارير وليس ضمانًا بأن endpoint ما زال متاحًا الآن. |
+| NileHope-FileGuard-Feature-Inventory-2026-11-19.md | ملفات الجذر والتقارير | جرد ميزات المشروع وحالتها في تاريخ التقرير. |
+| NileHope-FileGuard-Implementation-Report.md | ملفات الجذر والتقارير | ملخص التغييرات المنفذة ومخرجاتها في إصدار التقرير. |
+| NileHope-FileGuard-Operations-and-Weekly-Test-Guide.md | ملفات الجذر والتقارير | دليل التشغيل اليومي وخطة مراجعة أسبوعية؛ اتبع الإجراءات الحالية بعد مراجعتها. |
+| nilehope-fileguard-pilot-root-ca.crt | ملفات الجذر والتقارير | شهادة CA عامة للـ pilot. تثبيت جذر CA يثق بالشهادات التي أصدرتها؛ لا يثبت أن الموقع يعمل. |
+| NileHope-FileGuard-Predeployment-Test-Report-2026-11-19.md | ملفات الجذر والتقارير | تقرير التحقق قبل النشر بتاريخ محدد، وليس نتيجة فحص حي لهذا الدليل. |
+| NileHope-FileGuard-Project-Report.docx | ملفات الجذر والتقارير | نسخة Word من تقرير المشروع؛ للقراءة والتعديل التحريري. |
+| NileHope-FileGuard-Project-Report.md | ملفات الجذر والتقارير | تقرير نصي عن بنية المشروع وحالته. |
+| NileHope-FileGuard-Reference-Feature-Engineering-Plan.md | ملفات الجذر والتقارير | خطة تطوير مستوحاة من المشروع المرجعي؛ البنود المقترحة لا تعني أنها موجودة بالكود. |
+| output/learning-guide/index.html | حزمة الشرح العربية | موقع شرح عربي مستقل يعمل دون اتصال ويحتوي بحثًا وفهرسًا تفاعليًا. |
+| output/learning-guide/NileHope-FileGuard-Beginner-Guide-AR.pdf | حزمة الشرح العربية | نسخة PDF مرفقة بجوار الموقع للاستخدام المحلي. |
+| output/learning-guide/README.txt | حزمة الشرح العربية | تعليمات فتح الموقع المحلي واستعمال ملفات الحزمة. |
+| output/NileHope-FileGuard-Learning-Kit.zip | حزمة الشرح العربية | حزمة توزيع تضم الموقع وPDF وملف التعليمات ولا تضم أسرار تشغيل. |
+| output/nilehope-fileguard-pilot-root-ca-previous-20261116.crt | شهادات وحزم وتقارير مخرجة (output) | شهادة عامة/نسخة CA؛ ليست المفتاح الخاص. تستخدم فقط في إعداد موثق، والتحقق من بصمتها ومصدرها قبل توزيعها. |
+| output/NileHope-FileGuard-Root-CA-20261119.cer | شهادات وحزم وتقارير مخرجة (output) | شهادة عامة/نسخة CA؛ ليست المفتاح الخاص. تستخدم فقط في إعداد موثق، والتحقق من بصمتها ومصدرها قبل توزيعها. |
+| output/packages/caddy-2.11.9/caddy.exe | شهادات وحزم وتقارير مخرجة (output) | برنامج Caddy Windows موزع كأداة بوابة HTTPS اختيارية؛ وجوده لا يعني أن وضع المستخدم يحتاج proxy أو يشغله. |
+| output/packages/caddy-2.11.9/caddy_2.11.9_windows_amd64.zip | شهادات وحزم وتقارير مخرجة (output) | أرشيف توزيع/أدوات. كتالوج المشروع يشرح ملف الحزمة الخارجي؛ محتوياته المنسوخة لا تعتبر شيفرة مفعلة حتى فكها ومراجعتها. |
+| output/packages/caddy-2.11.9/LICENSE | شهادات وحزم وتقارير مخرجة (output) | نص ترخيص الأداة الموزعة، يحدد شروط إعادة استخدامها. |
+| output/packages/caddy-2.11.9/README.md | شهادات وحزم وتقارير مخرجة (output) | ملاحظات استخدام حزمة Caddy المرفقة وإصدارها. |
+| output/packages/FileGuard-Pilot-Root-CA.crt | شهادات وحزم وتقارير مخرجة (output) | شهادة عامة/نسخة CA؛ ليست المفتاح الخاص. تستخدم فقط في إعداد موثق، والتحقق من بصمتها ومصدرها قبل توزيعها. |
+| output/packages/NileHope-FileGuard-PR2-source.zip | شهادات وحزم وتقارير مخرجة (output) | أرشيف توزيع/أدوات. كتالوج المشروع يشرح ملف الحزمة الخارجي؛ محتوياته المنسوخة لا تعتبر شيفرة مفعلة حتى فكها ومراجعتها. |
+| output/pdf/NileHope-FileGuard-Beginner-Guide-AR.pdf | حزمة الشرح العربية | نسخة PDF للطباعة من الدليل المفصل، وتضم فهرس الملفات. |
+| output/pdf/NileHope-FileGuard-Implementation-Report.pdf | شهادات وحزم وتقارير مخرجة (output) | تقرير PDF مولد سابقًا من ملفات المشروع؛ مستند نتيجة وليس جزءًا من الخدمة وقت التشغيل. |
+| output/pdf/NileHope-FileGuard-Reference-Feature-Engineering-Plan.pdf | شهادات وحزم وتقارير مخرجة (output) | تقرير PDF مولد سابقًا من ملفات المشروع؛ مستند نتيجة وليس جزءًا من الخدمة وقت التشغيل. |
+| pyproject.toml | ملفات الجذر والتقارير | إعداد المشروع وأدوات التطوير مثل pytest وruff وحدود الحزم. |
+| README.md | ملفات الجذر والتقارير | المدخل الرئيسي: الفكرة والميزات الحالية وحدودها وأوامر التشغيل المحلي ومعمل Recovery. |
+| requirements.container.txt | ملفات الجذر والتقارير | اعتمادات Python الخاصة بصورة الحاوية لتقليل حزم التطوير غير اللازمة. |
+| requirements.txt | ملفات الجذر والتقارير | اعتمادات Python الأساسية لتشغيل API والاختبارات المحلية. |
+| ScanNetwork.ps1 | ملفات الجذر والتقارير | نسخة PowerShell لاكتشاف مضيفين محتملين على شبكة مصرح بها؛ لا تستخدمها خارج شبكتك ولا تعدل ACL. |
+| ScanNetworkCorrect.ps1 | ملفات الجذر والتقارير | نسخة محسنة من مسح الشبكة/اختبار الوصول، لا تنشر Agent ولا تثبت صلاحيات. |
+| ScanNetworkSimple.ps1 | ملفات الجذر والتقارير | نسخة مبسطة لاكتشاف أجهزة الشبكة لأغراض المعمل. |
+| scripts/Build-RecoveryPilot.ps1 | scripts/Build-RecoveryPilot.ps1 | يبني Recovery pilot .NET ويجهز ملفات تشغيله. |
+| scripts/check_pilot_console.py | scripts/check_pilot_console.py | فحص جاهزية خفيف لكونسول pilot وعناوين الاستجابة. |
+| scripts/check_recovery_lab.py | scripts/check_recovery_lab.py | يتأكد من مخرجات معمل Recovery التجريبي بعد تشغيله. |
+| scripts/configure_stack.py | scripts/configure_stack.py | ينشئ/يجهز `.env` المحلي الآمن نسبيًا لبدء Docker Compose. |
+| scripts/Discover-HospitalEnvironment.ps1 | scripts/Discover-HospitalEnvironment.ps1 | يجمع معلومات بيئة Windows والمشاركات لاستخدامها في التحضير؛ راجع البيانات قبل حفظها. |
+| scripts/lab_fleet.py | scripts/lab_fleet.py | يشغل عدة Agents افتراضية لاختبار واجهات الكونسول دون أجهزة حقيقية. |
+| scripts/start_recovery_lab.py | scripts/start_recovery_lab.py | ينشئ مختبرًا مؤقتًا بملفات اختبار لتجربة أخذ النسخ ومراقبة الاسترجاع. |
+| scripts/test_ui.py | scripts/test_ui.py | أداة تفاعل/فحص واجهة الكونسول في بيئة الاختبار. |
+| services/management/app/__init__.py | services/management/app/__init__.py | مصنع Flask `create_app`: يقرأ الإعدادات، يختار دور الخدمة، يضيف الأمان وCSRF ويسجل واجهات API والصفحات. |
+| services/management/app/agent_api.py | services/management/app/agent_api.py | مسارات اتصال Agents: enrollment، المصادقة بمفتاح، heartbeat، config، events، أوامر، recovery، والتحقق من البيانات. |
+| services/management/app/audit.py | services/management/app/audit.py | يسجل أفعال الإدارة في سلسلة بصمات مترابطة؛ التحقق يكشف العبث لكنه لا يمنع مسؤول قاعدة البيانات من حذف السجل كله. |
+| services/management/app/auth.py | services/management/app/auth.py | مساعدات جلسات الدخول ومقاومة محاولات الدخول المتكررة. |
+| services/management/app/bootstrap.py | services/management/app/bootstrap.py | إنشاء قاعدة البيانات وأول مسؤول عند عدم وجود حساب سابق، مع التحقق من سياسة كلمة مرور bootstrap. |
+| services/management/app/console_api.py | services/management/app/console_api.py | JSON API خلف جلسة المسؤول وCSRF لصفحات الأجهزة والأحداث والمشاركات والموافقات والإعدادات. |
+| services/management/app/db.py | services/management/app/db.py | طبقة اتصالات SQL والمعاملات والترحيلات بين SQLite/MySQL/PostgreSQL حسب الإعداد. |
+| services/management/app/directory.py | services/management/app/directory.py | واجهة موحدة لدليل المستخدمين، مع وضع mock واختيار LDAP؛ الكتابة الحقيقية تحتاج LDAPS وحساب محدود. |
+| services/management/app/recovery.py | services/management/app/recovery.py | التحقق من تقارير وأحداث Recovery الواردة وتجهيز حالتها للكونسول؛ لا ينفذ الاسترجاع على خادم الملفات. |
+| services/management/app/routes.py | services/management/app/routes.py | مسارات صفحات HTML القديمة/المساعدة وتسجيل الدخول والعرض والبحث والطلبات. |
+| services/management/app/schema.sql | services/management/app/schema.sql | تعريف جداول SQLite/المخطط الأساسي للمستخدمين والأجهزة والأحداث والإعدادات. |
+| services/management/app/services.py | services/management/app/services.py | منطق العمل: تسجيل الأجهزة، الطلبات والموافقات، مجموعات الدليل، الأوامر، الإحصاءات والبحث. |
+| services/management/app/shares.py | services/management/app/shares.py | تطبيع مسارات UNC/Linux وفحص انتمائها للنطاق المسجل؛ لا يغير ACL ولا يوقف الحذف. |
+| services/management/app/static/app.js | services/management/app/static | تفاعلات صفحات Flask التقليدية في المتصفح. |
+| services/management/app/static/hospital_logo.jpg | services/management/app/static | صورة الشعار/الهوية المستخدمة بواجهة Flask. |
+| services/management/app/static/style.css | services/management/app/static | ألوان وتخطيط صفحات Flask القديمة. |
+| services/management/app/telemetry.py | services/management/app/telemetry.py | يتحقق من قياسات الصحة والـ metadata التي يرسلها Agent لينكس. |
+| services/management/app/templates/_overview.html | services/management/app/templates | جزء HTML مشترك يعرض ملخصات لوحة overview. |
+| services/management/app/templates/approvals.html | services/management/app/templates | قالب قائمة طلبات الرفع/الموافقات وإجراءاتها. |
+| services/management/app/templates/audit.html | services/management/app/templates | قالب سجل الإدارة ونتيجة تحقق سلسلة التدقيق. |
+| services/management/app/templates/base.html | services/management/app/templates | القالب الأساسي المشترك للترويسة والتنقل والرسائل وملفات CSS/JS. |
+| services/management/app/templates/devices.html | services/management/app/templates | قالب تفاصيل الأجهزة وحالة الاتصال ومعلومات آخر heartbeat. |
+| services/management/app/templates/login.html | services/management/app/templates | قالب نموذج تسجيل الدخول للكونسول التقليدي. |
+| services/management/app/templates/overview.html | services/management/app/templates | قالب مؤشرات وملخص عام للكونسول التقليدي. |
+| services/management/app/templates/public.html | services/management/app/templates | قالب صفحة معلومات عامة أو فحص لا يحتاج واجهة الإدارة. |
+| services/management/app/templates/request.html | services/management/app/templates | قالب إرسال طلب وصول/رفع أو طلب إداري. |
+| services/management/app/templates/search.html | services/management/app/templates | قالب نتائج البحث في الأحداث والأجهزة. |
+| services/management/app/templates/settings.html | services/management/app/templates | قالب إعدادات النظام ونطاقات المشاركة والخدمات. |
+| services/management/app/uploads.py | services/management/app/uploads.py | رفع اختياري محدود الحجم: اسم آمن وUUID وSHA-256 وموافقة قبل تنزيل الملف؛ لا ينسخه تلقائيًا إلى share. |
+| services/management/app/worker.py | services/management/app/worker.py | عامل خلفي يحدث heartbeat ويعالج انتهاء بعض صلاحيات الدليل عند تفعيل الكتابة. |
+| simulate_fleet.py | ملفات الجذر والتقارير | محاكي مجموعة أجهزة يرسل نشاطًا تجريبيًا للـ API حتى تتعلم عرض الأجهزة والأحداث دون تثبيت Agent حقيقي. |
+| Start-Console-Only.bat | ملفات الجذر والتقارير | اختصار Windows لفتح الكونسول وحده في الإعداد المحلي. |
+| Start-Local.bat | ملفات الجذر والتقارير | غلاف Windows لتشغيل إعداد المشروع المحلي. |
+| Start-Local.ps1 | ملفات الجذر والتقارير | يشغل الكونسول المحلي ويجهز اعتماداته وفق مسار Windows. |
+| Stop-Local.bat | ملفات الجذر والتقارير | غلاف سريع لإيقاف الخدمات المحلية. |
+| Stop-Local.ps1 | ملفات الجذر والتقارير | يوقف عمليات وخدمات الإعداد المحلي التي بدأها المشروع. |
+| tests/conftest.py | tests/conftest.py | Fixtures مشتركة تنشئ تطبيقًا وقاعدة مؤقتة وبيانات اختبار لباقي اختبارات pytest. |
+| tests/recovery-engine/bin/Release/net10.0/FileGuard.Recovery.deps.json | مخرجات برنامج اختبارات .NET | بيانات اعتماد وتشغيل يقرأها مضيف .NET لمعرفة المكتبات المطلوبة وإصدار runtime. |
+| tests/recovery-engine/bin/Release/net10.0/FileGuard.Recovery.dll | مخرجات برنامج اختبارات .NET | نسخة DLL المترجمة من منطق Recovery الخاص بالمشروع؛ الناتج قابل للتشغيل فقط مع إعداداته واعتماداته، والتعديل يكون في ملفات .cs ثم إعادة البناء. |
+| tests/recovery-engine/bin/Release/net10.0/FileGuard.Recovery.exe | مخرجات برنامج اختبارات .NET | برنامج Windows مترجم/معبأ لتشغيل خدمة Recovery؛ لا تعدل الملف الناتج، ارجع إلى ملفات C# والمشروع. |
+| tests/recovery-engine/bin/Release/net10.0/FileGuard.Recovery.pdb | مخرجات برنامج اختبارات .NET | رموز تصحيح للتجميع المترجم تساعد المطور يربط stack trace بمصدر C#. |
+| tests/recovery-engine/bin/Release/net10.0/FileGuard.Recovery.runtimeconfig.json | مخرجات برنامج اختبارات .NET | بيانات اعتماد وتشغيل يقرأها مضيف .NET لمعرفة المكتبات المطلوبة وإصدار runtime. |
+| tests/recovery-engine/bin/Release/net10.0/FileGuard.Recovery.Tests.deps.json | مخرجات برنامج اختبارات .NET | بيانات اعتماد وتشغيل يقرأها مضيف .NET لمعرفة المكتبات المطلوبة وإصدار runtime. |
+| tests/recovery-engine/bin/Release/net10.0/FileGuard.Recovery.Tests.dll | مخرجات برنامج اختبارات .NET | نسخة DLL المترجمة من منطق Recovery الخاص بالمشروع؛ الناتج قابل للتشغيل فقط مع إعداداته واعتماداته، والتعديل يكون في ملفات .cs ثم إعادة البناء. |
+| tests/recovery-engine/bin/Release/net10.0/FileGuard.Recovery.Tests.exe | مخرجات برنامج اختبارات .NET | برنامج اختبارات Recovery مترجم للتشغيل محليًا في .NET؛ كود الاختبار الأصلي في tests/recovery-engine/Program.cs. |
+| tests/recovery-engine/bin/Release/net10.0/FileGuard.Recovery.Tests.pdb | مخرجات برنامج اختبارات .NET | رموز تصحيح للتجميع المترجم تساعد المطور يربط stack trace بمصدر C#. |
+| tests/recovery-engine/bin/Release/net10.0/FileGuard.Recovery.Tests.runtimeconfig.json | مخرجات برنامج اختبارات .NET | بيانات اعتماد وتشغيل يقرأها مضيف .NET لمعرفة المكتبات المطلوبة وإصدار runtime. |
+| tests/recovery-engine/bin/Release/net10.0/Microsoft.Extensions.Hosting.WindowsServices.dll | مخرجات برنامج اختبارات .NET | مكتبة امتداد .NET (Hosting WindowsServices) لخدمات مثل الاستضافة أو الإعداد أو التسجيل أو الحقن؛ ملف runtime مجمّع، وليس مصدر FileGuard. |
+| tests/recovery-engine/bin/Release/net10.0/runtimes/win/lib/net10.0/System.ServiceProcess.ServiceController.dll | مخرجات برنامج اختبارات .NET | مكتبة قياسية من .NET 10 لعائلة ServiceProcess ServiceController؛ توفر API runtime للتطبيق، ولا تعدل يدويًا. |
+| tests/recovery-engine/bin/Release/net10.0/System.ServiceProcess.ServiceController.dll | مخرجات برنامج اختبارات .NET | مكتبة قياسية من .NET 10 لعائلة ServiceProcess ServiceController؛ توفر API runtime للتطبيق، ولا تعدل يدويًا. |
+| tests/recovery-engine/FileGuard.Recovery.Tests.csproj | tests/recovery-engine | تعريف مشروع اختبارات C# لمحرك Recovery ومراجعته. |
+| tests/recovery-engine/obj/FileGuard.Recovery.Tests.csproj.nuget.dgspec.json | ملفات بناء وسيطة لاختبارات .NET | ملف MSBuild/NuGet مولّد يثبت اعتماديات وخصائص بناء المشروع لهذا الجهاز؛ يمكن إعادة توليده باستعادة الحزم والبناء. |
+| tests/recovery-engine/obj/FileGuard.Recovery.Tests.csproj.nuget.g.props | ملفات بناء وسيطة لاختبارات .NET | إعدادات build مولّدة من NuGet/MSBuild لتمرير خصائص الحزم والمترجم؛ لا تعدلها يدويًا. |
+| tests/recovery-engine/obj/FileGuard.Recovery.Tests.csproj.nuget.g.targets | ملفات بناء وسيطة لاختبارات .NET | إعدادات build مولّدة من NuGet/MSBuild لتمرير خصائص الحزم والمترجم؛ لا تعدلها يدويًا. |
+| tests/recovery-engine/obj/project.assets.json | ملفات بناء وسيطة لاختبارات .NET | ملف MSBuild/NuGet مولّد يثبت اعتماديات وخصائص بناء المشروع لهذا الجهاز؛ يمكن إعادة توليده باستعادة الحزم والبناء. |
+| tests/recovery-engine/obj/project.nuget.cache | ملفات بناء وسيطة لاختبارات .NET | علامة ذاكرة مؤقتة يستخدمها MSBuild لتحديد ما إذا كان يحتاج إعادة البناء؛ يمكن إعادة توليدها. |
+| tests/recovery-engine/obj/Release/net10.0/.NETCoreApp,Version=v10.0.AssemblyAttributes.cs | ملفات بناء وسيطة لاختبارات .NET | مصدر C# مولّد آليًا أثناء البناء (سمات الإصدار أو using عامة)، وليس نقطة تعديل للمنطق؛ عدّل Program.cs/RecoveryEngine.cs. |
+| tests/recovery-engine/obj/Release/net10.0/apphost.exe | ملفات بناء وسيطة لاختبارات .NET | ملف host وسيط ولّده .NET أثناء البناء لبدء التطبيق على Windows. |
+| tests/recovery-engine/obj/Release/net10.0/FileGuar.BAE98FDE.Up2Date | ملفات بناء وسيطة لاختبارات .NET | ملف وسيط ولّده MSBuild أثناء بناء .NET؛ ليس مصدرًا يدويًا ولا يلزم حفظه في نسخة مصدر نظيفة. |
+| tests/recovery-engine/obj/Release/net10.0/FileGuard.Recovery.Tests.AssemblyInfo.cs | ملفات بناء وسيطة لاختبارات .NET | مصدر C# مولّد آليًا أثناء البناء (سمات الإصدار أو using عامة)، وليس نقطة تعديل للمنطق؛ عدّل Program.cs/RecoveryEngine.cs. |
+| tests/recovery-engine/obj/Release/net10.0/FileGuard.Recovery.Tests.AssemblyInfoInputs.cache | ملفات بناء وسيطة لاختبارات .NET | علامة ذاكرة مؤقتة يستخدمها MSBuild لتحديد ما إذا كان يحتاج إعادة البناء؛ يمكن إعادة توليدها. |
+| tests/recovery-engine/obj/Release/net10.0/FileGuard.Recovery.Tests.assets.cache | ملفات بناء وسيطة لاختبارات .NET | علامة ذاكرة مؤقتة يستخدمها MSBuild لتحديد ما إذا كان يحتاج إعادة البناء؛ يمكن إعادة توليدها. |
+| tests/recovery-engine/obj/Release/net10.0/FileGuard.Recovery.Tests.csproj.AssemblyReference.cache | ملفات بناء وسيطة لاختبارات .NET | علامة ذاكرة مؤقتة يستخدمها MSBuild لتحديد ما إذا كان يحتاج إعادة البناء؛ يمكن إعادة توليدها. |
+| tests/recovery-engine/obj/Release/net10.0/FileGuard.Recovery.Tests.csproj.CoreCompileInputs.cache | ملفات بناء وسيطة لاختبارات .NET | علامة ذاكرة مؤقتة يستخدمها MSBuild لتحديد ما إذا كان يحتاج إعادة البناء؛ يمكن إعادة توليدها. |
+| tests/recovery-engine/obj/Release/net10.0/FileGuard.Recovery.Tests.csproj.FileListAbsolute.txt | ملفات بناء وسيطة لاختبارات .NET | ملف وسيط ولّده MSBuild أثناء بناء .NET؛ ليس مصدرًا يدويًا ولا يلزم حفظه في نسخة مصدر نظيفة. |
+| tests/recovery-engine/obj/Release/net10.0/FileGuard.Recovery.Tests.dll | ملفات بناء وسيطة لاختبارات .NET | نسخة DLL المترجمة من منطق Recovery الخاص بالمشروع؛ الناتج قابل للتشغيل فقط مع إعداداته واعتماداته، والتعديل يكون في ملفات .cs ثم إعادة البناء. |
+| tests/recovery-engine/obj/Release/net10.0/FileGuard.Recovery.Tests.GeneratedMSBuildEditorConfig.editorconfig | ملفات بناء وسيطة لاختبارات .NET | ملف وسيط ولّده MSBuild أثناء بناء .NET؛ ليس مصدرًا يدويًا ولا يلزم حفظه في نسخة مصدر نظيفة. |
+| tests/recovery-engine/obj/Release/net10.0/FileGuard.Recovery.Tests.genruntimeconfig.cache | ملفات بناء وسيطة لاختبارات .NET | علامة ذاكرة مؤقتة يستخدمها MSBuild لتحديد ما إذا كان يحتاج إعادة البناء؛ يمكن إعادة توليدها. |
+| tests/recovery-engine/obj/Release/net10.0/FileGuard.Recovery.Tests.GlobalUsings.g.cs | ملفات بناء وسيطة لاختبارات .NET | مصدر C# مولّد آليًا أثناء البناء (سمات الإصدار أو using عامة)، وليس نقطة تعديل للمنطق؛ عدّل Program.cs/RecoveryEngine.cs. |
+| tests/recovery-engine/obj/Release/net10.0/FileGuard.Recovery.Tests.pdb | ملفات بناء وسيطة لاختبارات .NET | رموز تصحيح مولدة تربط التطبيق المترجم بمواقع المصدر؛ ليست ملف تشغيل مستقلًا. |
+| tests/recovery-engine/obj/Release/net10.0/ref/FileGuard.Recovery.Tests.dll | ملفات بناء وسيطة لاختبارات .NET | نسخة DLL المترجمة من منطق Recovery الخاص بالمشروع؛ الناتج قابل للتشغيل فقط مع إعداداته واعتماداته، والتعديل يكون في ملفات .cs ثم إعادة البناء. |
+| tests/recovery-engine/obj/Release/net10.0/refint/FileGuard.Recovery.Tests.dll | ملفات بناء وسيطة لاختبارات .NET | نسخة DLL المترجمة من منطق Recovery الخاص بالمشروع؛ الناتج قابل للتشغيل فقط مع إعداداته واعتماداته، والتعديل يكون في ملفات .cs ثم إعادة البناء. |
+| tests/recovery-engine/Program.cs | tests/recovery-engine | برنامج اختبارات ذاتي التشغيل لمحرك Recovery ويستخدم مسارات تجريبية مؤقتة. |
+| tests/Test-DockerDiscovery.ps1 | tests/Test-DockerDiscovery.ps1 | فحص PowerShell لاكتشاف جاهزية أدوات Docker محليًا. |
+| tests/Test-LocalPermissions.ps1 | tests/Test-LocalPermissions.ps1 | فحص صلاحيات ملفات التثبيت المحلية للتأكد من عدم اتساعها بلا داعٍ. |
+| tests/test_console.py | tests/test_console.py | اختبارات وظائف الواجهة والخادم والمصادقة والطلبات والموافقات والأجهزة وسجل التدقيق. |
+| tests/test_console_api.py | tests/test_console_api.py | اختبارات API للكونسول: الجلسات وCSRF والتصدير والمخطط وقفل الأوامر. |
+| tests/test_event_attribution.py | tests/test_event_attribution.py | يتحقق من ربط حدث مشاركة بعنوان جهاز وتاريخ IP ومنع التكرار والتطابق الملتبس. |
+| tests/test_platform_monitoring.py | tests/test_platform_monitoring.py | اختبارات مراقبة لينكس والمسارات والترحيلات والتحقق من البيانات. |
+| tests/test_recovery_api.py | tests/test_recovery_api.py | اختبارات تحقق واستقبال أحداث Recovery وحالتها وعدم تكرارها. |
+| tests/test_uploads.py | tests/test_uploads.py | اختبارات إعدادات رفع الملفات وCSRF والموافقة وسلامة البصمة وحد الحجم. |
+| tmp/pdfs/build_implementation_report_pdf.py | أدوات ومعاينات تقارير PDF (tmp/pdfs) | سكريبت بناء PDF لتقرير/مقترح سابق؛ يستخدم أدوات إنشاء المستندات ولا يعمل كجزء من FileGuard runtime. |
+| tmp/pdfs/build_proposal_pdf.py | أدوات ومعاينات تقارير PDF (tmp/pdfs) | سكريبت بناء PDF لتقرير/مقترح سابق؛ يستخدم أدوات إنشاء المستندات ولا يعمل كجزء من FileGuard runtime. |
+| tmp/pdfs/implementation-delivery-1.png | أدوات ومعاينات تقارير PDF (tmp/pdfs) | صورة معاينة صفحة ضمن ملفات مراجعة PDF سابقة (implementation-delivery-1.png); ناتج تصميم مؤقت وليس من مكونات التطبيق. |
+| tmp/pdfs/implementation-delivery-2.png | أدوات ومعاينات تقارير PDF (tmp/pdfs) | صورة معاينة صفحة ضمن ملفات مراجعة PDF سابقة (implementation-delivery-2.png); ناتج تصميم مؤقت وليس من مكونات التطبيق. |
+| tmp/pdfs/implementation-delivery-3.png | أدوات ومعاينات تقارير PDF (tmp/pdfs) | صورة معاينة صفحة ضمن ملفات مراجعة PDF سابقة (implementation-delivery-3.png); ناتج تصميم مؤقت وليس من مكونات التطبيق. |
+| tmp/pdfs/implementation-final-1.png | أدوات ومعاينات تقارير PDF (tmp/pdfs) | صورة معاينة صفحة ضمن ملفات مراجعة PDF سابقة (implementation-final-1.png); ناتج تصميم مؤقت وليس من مكونات التطبيق. |
+| tmp/pdfs/implementation-final-2.png | أدوات ومعاينات تقارير PDF (tmp/pdfs) | صورة معاينة صفحة ضمن ملفات مراجعة PDF سابقة (implementation-final-2.png); ناتج تصميم مؤقت وليس من مكونات التطبيق. |
+| tmp/pdfs/implementation-final-3.png | أدوات ومعاينات تقارير PDF (tmp/pdfs) | صورة معاينة صفحة ضمن ملفات مراجعة PDF سابقة (implementation-final-3.png); ناتج تصميم مؤقت وليس من مكونات التطبيق. |
+| tmp/pdfs/implementation-report-1.png | أدوات ومعاينات تقارير PDF (tmp/pdfs) | صورة معاينة صفحة ضمن ملفات مراجعة PDF سابقة (implementation-report-1.png); ناتج تصميم مؤقت وليس من مكونات التطبيق. |
+| tmp/pdfs/implementation-report-2.png | أدوات ومعاينات تقارير PDF (tmp/pdfs) | صورة معاينة صفحة ضمن ملفات مراجعة PDF سابقة (implementation-report-2.png); ناتج تصميم مؤقت وليس من مكونات التطبيق. |
+| tmp/pdfs/implementation-report-3.png | أدوات ومعاينات تقارير PDF (tmp/pdfs) | صورة معاينة صفحة ضمن ملفات مراجعة PDF سابقة (implementation-report-3.png); ناتج تصميم مؤقت وليس من مكونات التطبيق. |
+| tmp/pdfs/implementation-report-final-1.png | أدوات ومعاينات تقارير PDF (tmp/pdfs) | صورة معاينة صفحة ضمن ملفات مراجعة PDF سابقة (implementation-report-final-1.png); ناتج تصميم مؤقت وليس من مكونات التطبيق. |
+| tmp/pdfs/implementation-report-final-2.png | أدوات ومعاينات تقارير PDF (tmp/pdfs) | صورة معاينة صفحة ضمن ملفات مراجعة PDF سابقة (implementation-report-final-2.png); ناتج تصميم مؤقت وليس من مكونات التطبيق. |
+| tmp/pdfs/implementation-report-final-3.png | أدوات ومعاينات تقارير PDF (tmp/pdfs) | صورة معاينة صفحة ضمن ملفات مراجعة PDF سابقة (implementation-report-final-3.png); ناتج تصميم مؤقت وليس من مكونات التطبيق. |
+| tmp/pdfs/proposal-checked-1.png | أدوات ومعاينات تقارير PDF (tmp/pdfs) | صورة معاينة صفحة ضمن ملفات مراجعة PDF سابقة (proposal-checked-1.png); ناتج تصميم مؤقت وليس من مكونات التطبيق. |
+| tmp/pdfs/proposal-checked-2.png | أدوات ومعاينات تقارير PDF (tmp/pdfs) | صورة معاينة صفحة ضمن ملفات مراجعة PDF سابقة (proposal-checked-2.png); ناتج تصميم مؤقت وليس من مكونات التطبيق. |
+| tmp/pdfs/proposal-checked-3.png | أدوات ومعاينات تقارير PDF (tmp/pdfs) | صورة معاينة صفحة ضمن ملفات مراجعة PDF سابقة (proposal-checked-3.png); ناتج تصميم مؤقت وليس من مكونات التطبيق. |
+| tmp/pdfs/proposal-checked-4.png | أدوات ومعاينات تقارير PDF (tmp/pdfs) | صورة معاينة صفحة ضمن ملفات مراجعة PDF سابقة (proposal-checked-4.png); ناتج تصميم مؤقت وليس من مكونات التطبيق. |
+| tmp/pdfs/proposal-checked-5.png | أدوات ومعاينات تقارير PDF (tmp/pdfs) | صورة معاينة صفحة ضمن ملفات مراجعة PDF سابقة (proposal-checked-5.png); ناتج تصميم مؤقت وليس من مكونات التطبيق. |
+| tmp/pdfs/proposal-checked-6.png | أدوات ومعاينات تقارير PDF (tmp/pdfs) | صورة معاينة صفحة ضمن ملفات مراجعة PDF سابقة (proposal-checked-6.png); ناتج تصميم مؤقت وليس من مكونات التطبيق. |
+| tmp/pdfs/proposal-final-1.png | أدوات ومعاينات تقارير PDF (tmp/pdfs) | صورة معاينة صفحة ضمن ملفات مراجعة PDF سابقة (proposal-final-1.png); ناتج تصميم مؤقت وليس من مكونات التطبيق. |
+| tmp/pdfs/proposal-final-2.png | أدوات ومعاينات تقارير PDF (tmp/pdfs) | صورة معاينة صفحة ضمن ملفات مراجعة PDF سابقة (proposal-final-2.png); ناتج تصميم مؤقت وليس من مكونات التطبيق. |
+| tmp/pdfs/proposal-final-3.png | أدوات ومعاينات تقارير PDF (tmp/pdfs) | صورة معاينة صفحة ضمن ملفات مراجعة PDF سابقة (proposal-final-3.png); ناتج تصميم مؤقت وليس من مكونات التطبيق. |
+| tmp/pdfs/proposal-final-4.png | أدوات ومعاينات تقارير PDF (tmp/pdfs) | صورة معاينة صفحة ضمن ملفات مراجعة PDF سابقة (proposal-final-4.png); ناتج تصميم مؤقت وليس من مكونات التطبيق. |
+| tmp/pdfs/proposal-final-5.png | أدوات ومعاينات تقارير PDF (tmp/pdfs) | صورة معاينة صفحة ضمن ملفات مراجعة PDF سابقة (proposal-final-5.png); ناتج تصميم مؤقت وليس من مكونات التطبيق. |
+| tmp/pdfs/proposal-final-6.png | أدوات ومعاينات تقارير PDF (tmp/pdfs) | صورة معاينة صفحة ضمن ملفات مراجعة PDF سابقة (proposal-final-6.png); ناتج تصميم مؤقت وليس من مكونات التطبيق. |
+| tmp/pdfs/proposal-page-1.png | أدوات ومعاينات تقارير PDF (tmp/pdfs) | صورة معاينة صفحة ضمن ملفات مراجعة PDF سابقة (proposal-page-1.png); ناتج تصميم مؤقت وليس من مكونات التطبيق. |
+| tmp/pdfs/proposal-page-2.png | أدوات ومعاينات تقارير PDF (tmp/pdfs) | صورة معاينة صفحة ضمن ملفات مراجعة PDF سابقة (proposal-page-2.png); ناتج تصميم مؤقت وليس من مكونات التطبيق. |
+| tmp/pdfs/proposal-page-3.png | أدوات ومعاينات تقارير PDF (tmp/pdfs) | صورة معاينة صفحة ضمن ملفات مراجعة PDF سابقة (proposal-page-3.png); ناتج تصميم مؤقت وليس من مكونات التطبيق. |
+| tmp/pdfs/proposal-page-4.png | أدوات ومعاينات تقارير PDF (tmp/pdfs) | صورة معاينة صفحة ضمن ملفات مراجعة PDF سابقة (proposal-page-4.png); ناتج تصميم مؤقت وليس من مكونات التطبيق. |
+| tmp/pdfs/proposal-page-5.png | أدوات ومعاينات تقارير PDF (tmp/pdfs) | صورة معاينة صفحة ضمن ملفات مراجعة PDF سابقة (proposal-page-5.png); ناتج تصميم مؤقت وليس من مكونات التطبيق. |
+| tmp/pdfs/proposal-page-6.png | أدوات ومعاينات تقارير PDF (tmp/pdfs) | صورة معاينة صفحة ضمن ملفات مراجعة PDF سابقة (proposal-page-6.png); ناتج تصميم مؤقت وليس من مكونات التطبيق. |
+<!-- FILE-CATALOG-END -->
