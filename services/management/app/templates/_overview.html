@@ -2,7 +2,7 @@
   <div class="card kpi kpi-blue">
     <div class="kpi-top">
       <span>{{ 'الأجهزة المتصلة' if lang == 'ar' else 'Devices Online' }}</span>
-      <span class="kpi-icon">🖥️</span>
+      <span class="kpi-icon" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="3" y="4" width="18" height="13" rx="2"/><path d="M8 21h8M12 17v4M2 21h20"/></svg></span>
     </div>
     <b>{{ s.online }} <small>/ {{ s.total }}</small></b>
     <small class="kpi-sub">{{ s.offline }} {{ 'أجهزة غير متصلة' if lang == 'ar' else 'devices offline' }}</small>
@@ -11,7 +11,7 @@
   <div class="card kpi kpi-orange">
     <div class="kpi-top">
       <span>{{ 'الموافقات المعلقة' if lang == 'ar' else 'Pending Approvals' }}</span>
-      <span class="kpi-icon">⏳</span>
+      <span class="kpi-icon" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg></span>
     </div>
     <b>{{ s.pending }}</b>
     <small class="kpi-sub">{{ 'بانتظار قرار المسؤول' if s.pending else ('لا توجد طلبات معلقة' if lang == 'ar' else 'No pending requests') }}</small>
@@ -20,7 +20,7 @@
   <div class="card kpi kpi-pink">
     <div class="kpi-top">
       <span>{{ 'المحاولات المحظورة اليوم' if lang == 'ar' else 'Blocked Today' }}</span>
-      <span class="kpi-icon">🚫</span>
+      <span class="kpi-icon" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="12" r="9"/><path d="m6 6 12 12"/></svg></span>
     </div>
     <b>{{ s.blocked }}</b>
     <small class="kpi-sub">{{ 'حذف أو رفع بدون إذن مسبق' if lang == 'ar' else 'Delete, upload & send without approval' }}</small>
@@ -29,7 +29,7 @@
   <div class="card kpi kpi-teal">
     <div class="kpi-top">
       <span>{{ 'قرارات اليوم' if lang == 'ar' else 'Decisions Today' }}</span>
-      <span class="kpi-icon">✅</span>
+      <span class="kpi-icon" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="12" r="9"/><path d="m8 12 2.5 2.5L16 9"/></svg></span>
     </div>
     <b>{{ s.decisions }}</b>
     <small class="kpi-sub">{{ 'قرارات اتخذت اليوم' if s.decisions else ('لا توجد قرارات حتى الآن' if lang == 'ar' else 'No decisions yet today') }}</small>

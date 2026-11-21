@@ -47,7 +47,7 @@
     <tbody>
       {% for d in rows %}
       <tr>
-        <td><b>🖥️ {{ d.hostname }}</b></td>
+        <td><b class="device-name">{{ d.hostname }}</b></td>
         <td>{{ d.win_user or '-' }}</td>
         <td>{{ d.department or ('غير محدد' if lang == 'ar' else 'General') }}</td>
         <td>
@@ -82,7 +82,7 @@
               <option value="isolate_smb">{{ 'قطع جلسات المشاركة' if lang == 'ar' else 'Disconnect SMB' }}</option>
               <option value="collect_logs">{{ 'سحب سجلات الفحص' if lang == 'ar' else 'Collect Logs' }}</option>
             </select>
-            <button class="btn-sm btn-action" {{ 'disabled' if not remote_commands_enabled }}>{{ 'تنفيذ ⚡' if lang == 'ar' else 'Send ⚡' }}</button>
+            <button class="btn-sm btn-action" {{ 'disabled' if not remote_commands_enabled }}>{{ 'تنفيذ' if lang == 'ar' else 'Send command' }}</button>
           </form>
         </td>
         <td>

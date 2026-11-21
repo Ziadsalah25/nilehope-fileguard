@@ -4,44 +4,44 @@
 
 {% block content %}
 <div class="flash warn">
-  {{ 'ملاحظة تشغيلية: قواعد الحظر (GPO / NTFS / Proxy) تُفرض فعلياً عبر نظام Windows وGroup Policy. وحدة التحكم تتولى الأتمتة وإدارة الصلاحيات المؤقتة.' if lang == 'ar' else 'Operational Note: Prevention switches (GPO / NTFS / Proxy) are enforced in Windows and Group Policy. This console orchestrates approvals and automated AD group membership.' }}
+  {{ 'تنبيه: هذه الإعدادات أهداف وسياسات مفضلة فقط. لا تطبق وحدة التحكم صلاحيات NTFS أو سياسات Windows تلقائياً؛ يجب تنفيذها واختبارها بشكل منفصل.' if lang == 'ar' else 'These are policy preferences only. This console does not apply NTFS permissions or Windows endpoint policies; configure and verify enforcement separately.' }}
 </div>
 
 <form method="post" action="{{ url_for('main.settings_save') }}" class="grid2">
   <input type="hidden" name="csrf" value="{{ csrf }}">
   <div class="card">
     <div class="card-head">
-      <h3>{{ 'سياسات المنع والحماية الشاملة (GPO / NTFS / Proxy)' if lang == 'ar' else 'Hospital Prevention Policies' }}</h3>
+      <h3>{{ 'أهداف سياسات الحماية' if lang == 'ar' else 'Protection Policy Targets' }}</h3>
     </div>
     
     <label class="switch">
       <div>
-        <b>{{ 'حظر حذف الملفات من مشاركات الخادم (NTFS)' if lang == 'ar' else 'Block delete on file server shares' }}</b>
-        <small>{{ 'يمكن للموظفين القراءة والإنشاء، ولكن يمنع الحذف نهائياً دون موافقة مسبقة موثقة' if lang == 'ar' else 'Desired policy only; validate and apply the NTFS configuration on Windows.' }}</small>
+        <b>{{ 'هدف السياسة: منع حذف الملفات من المشاركات' if lang == 'ar' else 'Target: prevent deletion on file shares' }}</b>
+        <small>{{ 'لا تطبق وحدة التحكم هذا المنع. يجب إعداد واختبار صلاحيات المشاركة وNTFS على Windows.' if lang == 'ar' else 'Not enforced by this console. Configure and test Windows share and NTFS permissions separately.' }}</small>
       </div>
       <input type="checkbox" name="pol_delete" {{ 'checked' if s.pol_delete == '1' }}>
     </label>
 
     <label class="switch">
       <div>
-        <b>{{ 'حظر الكتابة على وحدات التخزين الخارجية (USB Flash Drives)' if lang == 'ar' else 'Block USB & removable storage writes' }}</b>
-        <small>{{ 'منع نقل أو نسخ سجلات المرضى والملفات الطبية إلى فلاشات USB' if lang == 'ar' else 'Desired policy only; configure and verify Windows removable-storage policy.' }}</small>
+        <b>{{ 'هدف السياسة: تقييد وحدات التخزين الخارجية' if lang == 'ar' else 'Target: restrict removable storage' }}</b>
+        <small>{{ 'يتوفر أمر USB محدود فقط، والأوامر عن بعد معطلة افتراضياً.' if lang == 'ar' else 'Only a limited USB command exists; remote commands are disabled by default.' }}</small>
       </div>
       <input type="checkbox" name="pol_usb" {{ 'checked' if s.pol_usb == '1' }}>
     </label>
 
     <label class="switch">
       <div>
-        <b>{{ 'حظر الرفع إلى التخزين السحابي الشخصي (Proxy / Cloud Storage)' if lang == 'ar' else 'Block uploads to personal cloud storage' }}</b>
-        <small>{{ 'حجب مواقع التخزين غير المصرح بها (Google Drive, Dropbox, Mega)' if lang == 'ar' else 'Proxy allowlist blocks unapproved storage and file-sharing sites' }}</small>
+        <b>{{ 'هدف السياسة: تقييد الرفع للتخزين السحابي' if lang == 'ar' else 'Target: restrict personal cloud uploads' }}</b>
+        <small>{{ 'حظر الرفع من المتصفح غير مطبق في هذا المشروع.' if lang == 'ar' else 'Browser/cloud upload blocking is not implemented in this project.' }}</small>
       </div>
       <input type="checkbox" name="pol_cloud" {{ 'checked' if s.pol_cloud == '1' }}>
     </label>
 
     <label class="switch">
       <div>
-        <b>{{ 'تقييد تشغيل البرامج غير المعتمدة (AppLocker / Whitelist)' if lang == 'ar' else 'AppLocker — approved hospital software only' }}</b>
-        <small>{{ 'منع تشغيل البرمجيات الضارة أو غير المعتمدة من قسم تكنولوجيا المعلومات' if lang == 'ar' else 'Prevent unauthorized applications and malware from running on hospital PCs' }}</small>
+        <b>{{ 'هدف السياسة: البرامج المعتمدة فقط' if lang == 'ar' else 'Target: approved applications only' }}</b>
+        <small>{{ 'يجب إعداد AppLocker أو سياسة Windows مماثلة واختبارها بشكل منفصل.' if lang == 'ar' else 'Configure and validate AppLocker or another Windows policy separately.' }}</small>
       </div>
       <input type="checkbox" name="pol_applocker" {{ 'checked' if s.pol_applocker == '1' }}>
     </label>
@@ -81,7 +81,7 @@
       </label>
     </div>
 
-    <button class="btn-primary-block">{{ 'حفظ إعدادات السياسات 💾' if lang == 'ar' else 'Save Settings 💾' }}</button>
+    <button class="btn-primary-block">{{ 'حفظ تفضيلات السياسة' if lang == 'ar' else 'Save policy preferences' }}</button>
   </div>
 </form>
 
@@ -120,7 +120,7 @@
   <form method="post" action="{{ url_for('main.folder_add') }}" class="filters">
     <input type="hidden" name="csrf" value="{{ csrf }}">
     <input name="path" placeholder="\\FILESRV\Finance" required>
-    <button>{{ 'تسجيل مشاركة ➕' if lang == 'ar' else 'Register Share ➕' }}</button>
+    <button>{{ 'تسجيل مشاركة' if lang == 'ar' else 'Register share' }}</button>
   </form>
 </div>
 {% endblock %}

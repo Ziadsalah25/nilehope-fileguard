@@ -3,16 +3,14 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#f5f8fb">
   <title>{{ 'مستشفى نيل الأمل - نظام حماية الملفات' if session.get('lang', 'ar') == 'ar' else 'Nile of Hope - File Control' }}</title>
-  <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700;800&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+  <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}?v=20261119">
 </head>
 <body class="public {{ 'rtl' if session.get('lang', 'ar') == 'ar' else 'ltr' }}">
   <div class="public-wrap">
     <div class="public-card card">
-      <div class="public-logo-box">
+      <div class="public-logo-box" aria-label="Nile of Hope Hospital">
         <img src="{{ url_for('static', filename='hospital_logo.jpg') }}" alt="مستشفى نيل الأمل" class="hospital-logo-lg">
       </div>
       <div class="public-header">

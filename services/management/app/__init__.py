@@ -26,6 +26,8 @@ def create_app(config=None):
         CONSOLE_ENVIRONMENT=os.environ.get("CONSOLE_ENVIRONMENT", "local"),
         PUBLIC_CONSOLE_URL=os.environ.get("PUBLIC_CONSOLE_URL", "http://localhost:8080"),
         ENROLLMENT_ENABLED=os.environ.get("ENROLLMENT_ENABLED", "1") == "1",
+        UPLOAD_APPROVAL_ENABLED=os.environ.get("UPLOAD_APPROVAL_ENABLED", "0") == "1",
+        UPLOAD_STORAGE_ROOT=os.environ.get("UPLOAD_STORAGE_ROOT", "/var/lib/fileguard/uploads"),
         SESSION_COOKIE_HTTPONLY=True,
         SESSION_COOKIE_SAMESITE="Lax",
         SESSION_COOKIE_SECURE=prod,
@@ -33,6 +35,8 @@ def create_app(config=None):
     )
     if config:
         app.config.update(config)
+    if app.config["UPLOAD_APPROVAL_ENABLED"]:
+        app.config["MAX_CONTENT_LENGTH"] = 11 * 1024 * 1024
     if prod:
         if len(app.config["SECRET_KEY"]) < 32 or app.config["SECRET_KEY"].startswith("replace_"):
             raise RuntimeError("Set a random SECRET_KEY of at least 32 characters in production")
@@ -65,7 +69,7 @@ def create_app(config=None):
     def csrf_protect():
         # Agents use API keys, everything else that changes data needs the CSRF token.
         if request.method in ("POST", "PUT", "PATCH", "DELETE") and not request.path.startswith("/api/agent/"):
-            sent, expected = request.headers.get("X-CSRF-Token", request.form.get("csrf", "")), session.get("csrf", "")
+            sent, expected = request.headers.get("X-CSRF-Token") or request.form.get("csrf", ""), session.get("csrf", "")
             if not expected or not secrets.compare_digest(sent.encode(), expected.encode()):
                 abort(400, "Bad CSRF token")
 
@@ -114,3 +118,4 @@ def create_app(config=None):
         click.echo("admin saved")
 
     return app
+

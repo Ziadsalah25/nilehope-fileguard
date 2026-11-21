@@ -5,6 +5,7 @@ param(
   [ValidateSet('pilot','ring20','ring50','all')][string]$Ring = 'pilot',
   [ValidateSet('workstation','fileserver')][string]$Role = 'workstation',
   [switch]$AllowInsecureLocalhost,
+  [switch]$DirectConnection,
   [string]$StateDir=''
 )
 $ErrorActionPreference = 'Stop'
@@ -14,9 +15,14 @@ if ($uri.Scheme -ne 'https' -and -not ($AllowInsecureLocalhost -and $uri.IsLoopb
   throw 'Use HTTPS with a certificate trusted by this computer.'
 }
 [Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12
+if ($DirectConnection -and $PSVersionTable.PSVersion.Major -lt 6) {
+  # Process-local setting for this explicit internal-console connection only.
+  [Net.WebRequest]::DefaultWebProxy = $null
+}
 $Dir = if ($StateDir) { $StateDir } else { Join-Path $env:ProgramData 'FileControl' }
 $KeyFile = Join-Path $Dir 'key.txt'
 $CursorFile = Join-Path $Dir 'event-record.txt'
+$CorrelationFile = Join-Path $Dir 'event-correlation.json'
 $ResultFile = Join-Path $Dir 'pending-result.json'
 $UsbFile = Join-Path $Dir 'usb-before.json'
 $LogFile = Join-Path $Dir 'agent.log'
@@ -31,6 +37,7 @@ function Send($path, $body, $auth = $true, $method = 'Post') {
   $headers = @{}
   if ($auth) { $headers = @{ 'X-Device'=$Device; 'X-Api-Key'=(Get-Content $KeyFile -Raw).Trim() } }
   $params = @{ Method=$method; Uri="$Server$path"; Headers=$headers; TimeoutSec=20 }
+  if ($DirectConnection -and $PSVersionTable.PSVersion.Major -ge 6) { $params.NoProxy=$true }
   if ($method -eq 'Post') {
     $params.ContentType = 'application/json; charset=utf-8'
     $params.Body = [Text.Encoding]::UTF8.GetBytes(($body | ConvertTo-Json -Depth 6 -Compress))
@@ -100,11 +107,22 @@ function Refresh-Config {
   $script:Folders = @($config.folders)
 }
 function Heartbeat {
-  $nic = Get-NetAdapter | Where-Object Status -eq 'Up' | Sort-Object -Property @{Expression='HardwareInterface';Descending=$true},InterfaceIndex | Select-Object -First 1
-  $ip = $null
-  if ($nic) { $ip = (Get-NetIPAddress -InterfaceIndex $nic.ifIndex -AddressFamily IPv4 | Select-Object -First 1).IPAddress }
+  $adapters = @(Get-NetAdapter | Where-Object Status -eq 'Up' | Sort-Object -Property @{Expression='HardwareInterface';Descending=$true},InterfaceIndex)
+  $upIndexes = @($adapters | ForEach-Object { $_.ifIndex })
+  $ips = @(Get-NetIPAddress -AddressFamily IPv4 | Where-Object {
+    $upIndexes -contains $_.InterfaceIndex -and $_.IPAddress -ne '0.0.0.0' -and
+    $_.IPAddress -ne '127.0.0.1' -and $_.IPAddress -notlike '169.254.*'
+  } | Sort-Object InterfaceIndex | Select-Object -ExpandProperty IPAddress -Unique | Select-Object -First 16)
+  $nic = $adapters | Select-Object -First 1
+  $ip = if ($ips.Count -gt 0) { $ips[0] } else { $null }
+  if ($nic) {
+    $nicIps = @(Get-NetIPAddress -InterfaceIndex $nic.ifIndex -AddressFamily IPv4 | Where-Object {
+      $_.IPAddress -ne '0.0.0.0' -and $_.IPAddress -ne '127.0.0.1' -and $_.IPAddress -notlike '169.254.*'
+    } | Select-Object -ExpandProperty IPAddress)
+    if ($nicIps.Count -gt 0) { $ip = $nicIps[0] }
+  }
   $user = (Get-CimInstance Win32_ComputerSystem).UserName
-  $body = @{win_user=$user;ip=$ip;mac=$nic.MacAddress;agent_version='1.3.0';os_family='windows';architecture=$env:PROCESSOR_ARCHITECTURE}
+  $body = @{win_user=$user;ip=$ip;ips=$ips;mac=$nic.MacAddress;agent_version='1.3.1';os_family='windows';architecture=$env:PROCESSOR_ARCHITECTURE}
   try {
     $os = Get-CimInstance Win32_OperatingSystem
     $cpu = (Get-CimInstance Win32_Processor | Measure-Object -Property LoadPercentage -Average).Average
@@ -137,36 +155,166 @@ function In-Scope($path) {
   }
   return $false
 }
+function Get-EventData($event) {
+  $data = @{}
+  ([xml]$event.ToXml()).Event.EventData.Data | ForEach-Object { $data[$_.Name] = $_.'#text' }
+  return $data
+}
+function Has-DeleteRight($mask, $accessList = '') {
+  if ([string]$accessList -match '%%1537') { return $true }
+  if ([string]$mask -notmatch '^(0[xX])?[0-9a-fA-F]+$') { return $false }
+  try {
+    $text = ([string]$mask) -replace '^0[xX]',''
+    $value = [Convert]::ToInt64($text,16)
+    return (($value -band 0x10000) -ne 0 -or ($value -band 0x40) -ne 0)
+  } catch { return $false }
+}
+function Event-Result($event) {
+  if (($event.Keywords -band 0x0010000000000000) -ne 0) { return 'blocked' }
+  return 'allowed'
+}
+function To-SharePath($localPath) {
+  if (-not $localPath) { return $null }
+  try { $physical = [IO.Path]::GetFullPath(([string]$localPath).Trim()).TrimEnd('\') }
+  catch { return $null }
+  foreach ($root in $script:Folders) {
+    $parts = $root.TrimStart('\') -split '\\',3
+    if ($parts.Count -lt 2) { continue }
+    $shareName = $parts[1]
+    $subPath = if ($parts.Count -gt 2) { $parts[2] } else { '' }
+    $share = Get-SmbShare -Name $shareName -ErrorAction SilentlyContinue | Select-Object -First 1
+    if (-not $share -or -not $share.Path) { continue }
+    $physicalRoot = [string]$share.Path
+    if ($subPath) { $physicalRoot = Join-Path $physicalRoot ($subPath -replace '\\',[IO.Path]::DirectorySeparatorChar) }
+    try { $physicalRoot = [IO.Path]::GetFullPath($physicalRoot).TrimEnd('\') }
+    catch { continue }
+    if ($physical.Equals($physicalRoot,[StringComparison]::OrdinalIgnoreCase)) { $relative = '' }
+    elseif ($physical.StartsWith($physicalRoot+'\',[StringComparison]::OrdinalIgnoreCase)) { $relative = $physical.Substring($physicalRoot.Length).TrimStart('\') }
+    else { continue }
+    $mapped = "\\$Device\$shareName"
+    if ($subPath) { $mapped += '\' + $subPath }
+    if ($relative) { $mapped += '\' + $relative }
+    if (In-Scope $mapped) { return $mapped }
+  }
+  return $null
+}
+function Read-CorrelationState {
+  $state = @{share_checks=@();handles=@()}
+  if (-not (Test-Path $CorrelationFile)) { return $state }
+  try {
+    $saved = Get-Content $CorrelationFile -Raw | ConvertFrom-Json
+    $state.share_checks = @($saved.share_checks)
+    $state.handles = @($saved.handles)
+  } catch { Write-AgentLog 'Ignoring unreadable event-correlation cache.' }
+  return $state
+}
+function Trim-CorrelationState($state) {
+  $cutoff = [DateTime]::UtcNow.AddHours(-12)
+  $state.share_checks = @($state.share_checks | Where-Object {
+    try { [DateTime]::Parse([string]$_.ts).ToUniversalTime() -ge $cutoff } catch { $false }
+  } | Select-Object -Last 5000)
+  $state.handles = @($state.handles | Where-Object {
+    try { [DateTime]::Parse([string]$_.ts).ToUniversalTime() -ge $cutoff } catch { $false }
+  } | Select-Object -Last 5000)
+}
+function Find-ShareCheck($state, $logonId, $path, $eventTime) {
+  if (-not $logonId -or -not $path) { return $null }
+  $matches = @($state.share_checks | Where-Object {
+    if ([string]$_.logon_id -ne [string]$logonId -or -not ([string]$_.file).Equals([string]$path,[StringComparison]::OrdinalIgnoreCase)) { return $false }
+    try { [Math]::Abs(($eventTime - [DateTime]::Parse([string]$_.ts).ToUniversalTime()).TotalSeconds) -le 600 }
+    catch { $false }
+  } | Sort-Object -Property ts -Descending)
+  if ($matches.Count -gt 0) { return $matches[0] }
+  return $null
+}
 function Forward-Events {
   if ($script:Folders.Count -eq 0) { return }
   if (Test-Path $CursorFile) {
     $last = [long](Get-Content $CursorFile -Raw).Trim()
     $newest = Get-WinEvent -LogName Security -MaxEvents 1
     if ($newest.RecordId -lt $last) { throw 'Security log was cleared. Review the log and reset event-record.txt manually.' }
-    $filter = "*[System[EventID=5145 and EventRecordID > $last]]"
+    $filter = "*[System[(EventID=5145 or EventID=4656 or EventID=4663 or EventID=4660) and EventRecordID > $last]]"
   } else {
     $last = 0
-    $filter = '*[System[EventID=5145 and TimeCreated[timediff(@SystemTime) <= 120000]]]'
+    $filter = '*[System[(EventID=5145 or EventID=4656 or EventID=4663 or EventID=4660) and TimeCreated[timediff(@SystemTime) <= 120000]]]'
   }
   $found = @()
   try { $found = @(Get-WinEvent -LogName Security -FilterXPath $filter -Oldest -MaxEvents 200) }
   catch { if ($_.FullyQualifiedErrorId -notlike 'NoMatchingEventsFound*') { throw }; return }
   $events = @()
+  $state = Read-CorrelationState
   foreach ($event in $found) {
-    $data = @{}
-    ([xml]$event.ToXml()).Event.EventData.Data | ForEach-Object { $data[$_.Name] = $_.'#text' }
-    if ($data['AccessList'] -notmatch '%%1537' -and (([Convert]::ToInt64(($data['AccessMask'] -replace '^0x',''),16) -band 0x10000) -eq 0)) { continue }
-    $share = ($data['ShareName'] -split '\\')[-1]
-    $path = "\\$Device\$share\$($data['RelativeTargetName'])".TrimEnd('\')
-    if (-not (In-Scope $path)) { continue }
+    $data = Get-EventData $event
+    $eventTime = $event.TimeCreated.ToUniversalTime()
+    $timestamp = $eventTime.ToString('o')
+    $logonId = [string]$data['SubjectLogonId']
+    $handleId = [string]$data['HandleId']
+    $user = [string]$data['SubjectUserName']
+    if ($data['SubjectDomainName'] -and $data['SubjectDomainName'] -ne '-' -and $user) { $user = "$($data['SubjectDomainName'])\$user" }
+    $path = $null
+    $shareName = $null
+    $sourceIp = $null
+    $result = Event-Result $event
+    $action = $null
+    $accessMask = if ([string]$data['AccessMask']) { [string]$data['AccessMask'] } else { $null }
+
+    if ($event.Id -eq 5145) {
+      $shareName = [string]$data['ShareName']
+      $shareName = ($shareName -split '\\' | Where-Object { $_ } | Select-Object -Last 1)
+      if (-not $shareName) { continue }
+      $relative = ([string]$data['RelativeTargetName']).TrimStart('\')
+      $path = "\\$Device\$shareName"
+      if ($relative) { $path += '\' + $relative }
+      if (-not (In-Scope $path)) { continue }
+      $sourceIp = [string]$data['IpAddress']
+      # Cache every in-scope SMB check so file-system records can be linked to the
+      # same server logon session and exact path. Only delete checks are displayed.
+      if ($logonId) {
+        $state.share_checks += @{logon_id=$logonId;file=$path;ip=$sourceIp;win_user=$user;ts=$timestamp}
+      }
+      if (-not (Has-DeleteRight $accessMask $data['AccessList'])) { continue }
+      $action = 'Delete access check'
+    } elseif ($event.Id -eq 4656 -or $event.Id -eq 4663) {
+      $path = To-SharePath $data['ObjectName']
+      if (-not $path -or -not (In-Scope $path)) { continue }
+      if (-not (Has-DeleteRight $accessMask)) { continue }
+      $action = if ($event.Id -eq 4656) { 'Delete right requested' } else { 'Delete right used' }
+      $related = Find-ShareCheck $state $logonId $path $eventTime
+      if ($related) {
+        $sourceIp = [string]$related.ip
+        if ($related.win_user) { $user = [string]$related.win_user }
+      }
+      if ($handleId -and $logonId) {
+        $state.handles = @($state.handles | Where-Object { [string]$_.key -ne "$logonId|$handleId" })
+        $state.handles += @{key="$logonId|$handleId";logon_id=$logonId;handle_id=$handleId;file=$path;share_name=(($path.TrimStart('\') -split '\\')[1]);win_user=$user;ts=$timestamp}
+      }
+    } elseif ($event.Id -eq 4660) {
+      if (-not $handleId -or -not $logonId) { continue }
+      $handle = $state.handles | Where-Object { [string]$_.key -eq "$logonId|$handleId" } | Select-Object -Last 1
+      if (-not $handle) { continue }
+      $path = [string]$handle.file
+      if (-not (In-Scope $path)) { continue }
+      $shareName = [string]$handle.share_name
+      $user = if ($handle.win_user) { [string]$handle.win_user } else { $user }
+      $related = Find-ShareCheck $state $logonId $path $eventTime
+      if ($related) { $sourceIp = [string]$related.ip }
+      $action = 'File deleted'
+      $result = 'observed'
+      $state.handles = @($state.handles | Where-Object { [string]$_.key -ne "$logonId|$handleId" })
+    }
+
+    if (-not $action -or -not $path) { continue }
     $events += @{
-      ts=$event.TimeCreated.ToUniversalTime().ToString('yyyy-MM-ddTHH:mm:ssZ');win_user=$data['SubjectUserName']
-      ip=$data['IpAddress'];action='Delete access check';file=$path;process='SMB'
-      result=$(if (($event.Keywords -band 0x0010000000000000) -ne 0) {'blocked'} else {'allowed'})
+      event_id="wse-record-$($event.RecordId)";source_event_id=[int]$event.Id;record_id=[string]$event.RecordId
+      logon_id=$(if ($logonId) { $logonId } else { $null });handle_id=$(if ($handleId) { $handleId } else { $null })
+      access_mask=$accessMask;share_name=$(if ($shareName) { $shareName } else { $null })
+      ts=$timestamp;win_user=$user;ip=$sourceIp;action=$action;file=$path;process='SMB';result=$result
     }
   }
   if ($events.Count -gt 0) { Send '/api/agent/events' @{events=@($events)} | Out-Null }
-  # Commit cursor only after the whole batch was acknowledged. These are access checks, not proof of deletion.
+  # Cache and cursor commit only after the complete event batch was acknowledged.
+  Trim-CorrelationState $state
+  $state | ConvertTo-Json -Depth 6 | Set-Content $CorrelationFile -Encoding UTF8
   if ($found.Count -gt 0) { Set-Content $CursorFile ([string]$found[-1].RecordId) }
 }
 function Probe {
@@ -200,3 +348,4 @@ while ($true) {
   $tick++
   Start-Sleep -Seconds 30
 }
+

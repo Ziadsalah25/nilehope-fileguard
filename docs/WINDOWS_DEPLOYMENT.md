@@ -27,12 +27,12 @@ You need:
 
 - Windows VM OS/version confirmed by discovery, administrator rights for installation, and sufficient free disk space.
 - Python 3.11+ installed **for all users** so LOCAL SERVICE can use its base Python runtime. Use a maintained Python release and an explicit path if multiple versions are present.
-- The official Windows `caddy.exe` binary from https://caddyserver.com/download, extracted locally.
-- A hospital DNS name for the console, pointing to the VM's hospital LAN address.
+- A stable/reserved LAN IPv4 address for the VM, and the exact IP address or DNS name clients will use. The server certificate must contain that same IP/name in its SAN.
+- A PEM server certificate chain and matching PEM private key. Prefer a certificate from the hospital PKI. For an existing legacy pilot using the FileGuard local CA, use `deploy\windows\Enable-DirectHttps.ps1` to migrate the installed console and issue a leaf certificate. Keep private keys on the VM.
 - A database choice. SQLite is included for an initial single-VM pilot. For hospital-wide deployment, use a backed-up PostgreSQL service and supply its connection URL. PostgreSQL is not silently installed by this script.
 - Outbound LDAPS connectivity and the hospital AD CA chain if approvals will be enabled.
 
-No hospital VM credentials or network access are present in this Codex workspace. Installation and the first live agent test therefore need to be run on your VM.
+For a new installation, copy the package to the VM and provide the certificate/key paths directly to the installer. If using a private pilot CA, distribute only its public root certificate to authorized LAN clients. Never copy the CA private key to client devices.
 
 ## 3. Install the console
 
@@ -40,45 +40,70 @@ In an elevated Windows PowerShell window, from the extracted project:
 
 ```powershell
 .\deploy\windows\Install-Console.ps1 `
-  -Hostname 'dlp.your-hospital-domain.example' `
-  -CaddyPath 'C:\Tools\caddy.exe' `
+  -PublicConsoleUrl 'https://dlp.your-hospital-domain.example' `
+  -BindAddress '192.0.2.10' `
+  -TlsCertificatePath 'C:\Certificates\fileguard-fullchain.pem' `
+  -TlsPrivateKeyPath 'C:\Certificates\fileguard-server.key' `
   -PythonPath 'C:\Program Files\Python312\python.exe'
 ```
 
-Use your actual hostname and Python location. The default data folder is `C:\ProgramData\NileHopeDLP`. The installer:
+Replace the example URL, LAN address, and certificate paths with the actual values. The URL host must match the certificate SAN. The default data folder is `C:\ProgramData\NileHopeDLP`. The installer:
 
 1. Restricts the installation folder to Administrators, SYSTEM, and read access for LOCAL SERVICE.
 2. Installs the application dependencies into a virtual environment.
 3. Generates cryptographic secrets and writes protected runtime configuration. On reinstallation, it preserves the enrollment token, session secret, and database URL.
 4. Initializes the configured database and prompts for the `admin` password (12+ characters, hidden input).
-5. Registers web, expiry-worker and HTTPS proxy startup tasks as LOCAL SERVICE with restart behavior.
-6. Starts those tasks. Waitress listens only on loopback port 8000; Caddy serves HTTPS on port 443.
+5. Registers the web and expiry-worker startup tasks as LOCAL SERVICE with restart behavior; the web application serves TLS directly.
+6. Starts those tasks. Do not expose any loopback-only HTTP listener to client networks.
 
 The initial test leaves remote commands and directory writes disabled. Use `-EnableRemoteCommands` for a later control test; supply real LDAPS settings for approvals. An installer message that tasks started is not proof that HTTPS or hospital connectivity works; perform the checks below.
 
 For PostgreSQL, pass `-DatabaseUrl` with your actual connection URL, supplied locally from a protected input/variable. URL-encode special characters in credentials, and configure database TLS as required by the hospital. Do not paste the URL into chat. The installer does not migrate an existing database.
 
-## 4. Configure HTTPS trust, DNS, and network access
+## 4. Migrate an existing Caddy pilot to direct HTTPS
 
-The supplied Caddy configuration uses an internal CA, suitable for an intranet pilot. The first certificate issuance creates a root certificate under the console data folder:
+For an existing installation with the legacy Caddy task and local CA, run this elevated migration script from the project package on the VM:
 
 ```powershell
-Get-ChildItem 'C:\ProgramData\NileHopeDLP\data\caddy' -Filter root.crt -Recurse
+.\deploy\windows\Enable-DirectHttps.ps1 `
+  -BindAddress '192.0.2.10' `
+  -PublicConsoleUrl 'https://192.0.2.10' `
+  -AllowClientIp '192.0.2.25' `
+  -FirewallRuleName 'NileHopeDLP-DirectHTTPS-Test'
 ```
 
-Distribute **only the public root certificate** to intended computers through the hospital's trusted-root certificate policy. Do not distribute the CA private key. Alternatively configure Caddy with a certificate from the hospital's existing PKI before deployment.
+The migration backs up `runtime.json`, issues an IP-SAN leaf certificate from the existing local CA, switches the web task to direct TLS, disables the legacy proxy task, validates `/healthz` with certificate verification, and adds a firewall rule only for the specified IPv4 address. Review the generated backup path and exact firewall scope. To allow a different device, create a separately reviewed rule; do not broaden the test rule by default.
 
-Create a DNS record for your selected hostname. Permit TCP 443 to the console only from the intended hospital client/server subnets. The installer leaves firewall scope and DNS changes to your actual network configuration; it does not guess them or publish the console on the internet. Keep port 8000 private and do not expose the database port to PCs.
+Export or copy **only the public root certificate** to authorized clients and import it into the client's Trusted Root Certification Authorities store. Do not distribute the CA private key. The client must use the same IP/name present in the certificate SAN.
+
+## 5. Configure LAN reachability and verify HTTPS
+
+Permit TCP 443 to the console only from approved hospital LAN client/server addresses or subnets. Keep port 8000 private and do not expose the database port to PCs. Do not configure router port-forwarding or public ingress for a LAN-only pilot. Ensure routing exists between the client VLAN and VM VLAN; a Windows Firewall allow rule cannot create a missing route.
+
+The migration script's test rule is intentionally restricted to one client address. Before domain-wide use, identify the exact client subnets to include, then update the existing inbound rule on the VM (or its authoritative firewall GPO): **Inbound Rules -> NileHope direct HTTPS test rule -> Properties -> Scope -> Remote IP address**. Retain TCP 443, the console's local address, the Python program path, and the Domain profile. Add only the approved pilot/client subnet ranges. Verify a client from each routed subnet; keep the rule limited to one IP if the pilot is still single-device.
 
 Verify from a certificate-trusting hospital computer:
 
 ```powershell
-Invoke-RestMethod 'https://YOUR-CONSOLE-HOSTNAME/healthz'
+Test-NetConnection 192.0.2.10 -Port 443
+Invoke-RestMethod 'https://192.0.2.10/healthz'
 ```
 
-Expected: `ok: True`. Open the same HTTPS hostname in a browser and sign in. Review `%ProgramData%\NileHopeDLP\data\Web.log`, `Worker.log`, `Proxy.log` and Task Scheduler if a task fails. Logs rotate on restart when larger than 10 MB; install continuous log retention/rotation appropriate to hospital operations before broad rollout.
+Expected: TCP connection succeeds and `/healthz` returns `ok: True` with no certificate warning. Open `https://192.0.2.10/login` in a browser and sign in. Review `%ProgramData%\NileHopeDLP\data\Web.log`, `Worker.log` and Task Scheduler if a task fails. Logs rotate on restart when larger than 10 MB; install continuous log retention/rotation appropriate to hospital operations before broad rollout.
 
-## 5. Register actual hospital shares
+### Distribute the public root certificate to domain computers
+
+For a private pilot CA, distribute only its public `.cer` file through a computer GPO:
+
+1. In Group Policy Management, create a pilot GPO linked to the intended **computer OU**.
+2. Edit it at **Computer Configuration -> Policies -> Windows Settings -> Security Settings -> Public Key Policies -> Trusted Root Certification Authorities**.
+3. Right-click the store, select **Import**, and select the public FileGuard root `.cer` file. Never import or distribute the CA private key.
+4. On one pilot computer, run `gpupdate /force`, then check `Cert:\LocalMachine\Root` for the expected CA thumbprint. Confirm that client URL host matches the server certificate SAN.
+5. Test `/healthz` and the browser before linking the GPO to additional computer OUs.
+
+For production, prefer a certificate issued by the hospital PKI and distribute its issuing chain using existing certificate auto-enrollment policy. The pilot leaf certificate is valid for the configured IP only; a DNS URL needs a certificate with that DNS name in its SAN.
+
+## 6. Register actual hospital shares
 
 You can add exact paths such as `\\FILE01\Finance` under Settings, or import discovery output on the VM:
 
@@ -89,13 +114,13 @@ Set-Location 'C:\ProgramData\NileHopeDLP'
 
 Imports are validated before writing, are deduplicated, and only register monitoring targets. Wildcards such as `\\FILE01\*` are not supported. Registration does not change any file permissions or start file scanning.
 
-## 6. Install one PC agent and one file-server agent
+## 7. Install one PC agent and one file-server agent
 
 Copy the `agent` folder to an approved deployment location. On one pilot PC, in elevated PowerShell:
 
 ```powershell
 $token = Read-Host 'Enrollment token from the protected console runtime configuration'
-.\agents\windows-monitor\Install-LocalAgent.ps1 -ServerUrl 'https://YOUR-CONSOLE-HOSTNAME' -EnrollToken $token -Ring pilot
+.\agents\windows-monitor\Install-LocalAgent.ps1 -ServerUrl 'https://YOUR-CONSOLE-HOSTNAME' -EnrollToken $token -Ring pilot -DirectConnection
 Remove-Variable token
 ```
 
@@ -114,7 +139,7 @@ Check:
 
 Agent keys, bootstrap token, pending results and logs live in `%ProgramData%\FileControl`, restricted to SYSTEM/Administrators. The bootstrap token is deleted after enrollment. The command result is retried if delivery fails; disruptive commands are not automatically re-executed after a lost heartbeat response. A command stuck at `sent` needs investigation before any manual requeue.
 
-## 7. Enable AD approvals after validating their scope
+## 8. Enable AD approvals after validating their scope
 
 Create dedicated security groups such as `FC-Delete-Approved`, `FC-Upload-Approved`, and `FC-Send-Approved` in the chosen group OU. Delegate only membership management to the application account; do not use Domain Admin credentials. Review Windows ACL/GPO integration separately.
 
@@ -135,14 +160,16 @@ Before broad use, test approval, rejection, expiry, revocation, an unavailable D
 
 Administrators can enter reviewed requests at `/request` while signed in. Anonymous staff requests remain disabled; hospital SSO and staff identity verification are still an integration choice.
 
-## 8. Deploy agents to all intended computer OUs using GPO
+## 9. Deploy agents to all intended computer OUs using GPO
+
+If the workstation or domain policy requires signed PowerShell scripts, have the project scripts signed with the organization's code-signing certificate and ensure the signer is trusted before deployment. The current local policy rejected the unsigned bundle generator; do not weaken or bypass the execution policy to run it. The agent scheduled task uses the computer's configured execution policy as well; use the organization's approved script-signing or endpoint-management process.
 
 Prepare the bundle locally:
 
 ```powershell
 $token = Read-Host 'Enrollment token'
 .\agents\windows-monitor\Prepare-GPODeployment.ps1 -ServerUrl 'https://YOUR-CONSOLE-HOSTNAME' `
-  -EnrollToken $token -FileServers 'FILE01','FILE02' -Ring pilot
+  -EnrollToken $token -FileServers 'FILE01','FILE02' -Ring pilot -DirectConnection
 Remove-Variable token
 ```
 
@@ -152,16 +179,18 @@ The bundle contains an enrollment credential. Restrict write access to administr
 2. Under Computer Configuration -> Windows Settings -> Scripts -> Startup -> PowerShell Scripts, choose **Show Files**.
 3. Copy all generated files there, then **Add `Startup-Agent.ps1`** as the startup script.
 4. Ensure computer startup can read the policy files, and deploy certificate trust before the agent startup policy.
-5. Reboot pilot devices and verify installation/heartbeats. The bundle assigns `fileserver` role only to explicitly named server computer names.
+5. Reboot pilot devices and verify installation/heartbeats. When a device's existing agent points to a different console, the startup installer moves its old API key to a protected `key.previous-*.txt` file and enrolls with the new console. Remove that old key file after the new heartbeat is confirmed. The bundle assigns `fileserver` role only to explicitly named server computer names.
 6. Extend the validated policy to the intended PC OUs and appropriate file-server OUs. Ring labels are inventory labels; the backend does not automatically limit policy enforcement by ring.
 
 This package generates files and instructions. It does not claim a GPO exists merely because files were copied to SYSVOL. GPMC registration/linking must be performed in your actual domain.
 
-When initial enrollment is complete, set `ENROLLMENT_ENABLED` to `0` in protected `runtime.json` and restart the web task. Existing device keys continue working. Use a new enrollment token and window for later device additions; treat the initial enrollment token as visible to enrolled computers.
+The bundle stores an enrollment token in `deployment.json` in the GPO folder. Restrict read access to the pilot computers/admins, remove the temporary bundle after enrollment, set `ENROLLMENT_ENABLED` to `0` in protected `runtime.json`, and restart the web task. Existing device keys continue working. Use a new enrollment token and window for later device additions; treat the initial enrollment token as visible to enrolled computers.
 
-## 9. Backups and recovery
+For the current pilot, use the console URL whose host matches the leaf certificate SAN. If agents already point to another console, the startup bundle re-enrolls them at the new URL and retains the previous API key locally as `key.previous-*.txt`; remove that file after the new heartbeat is confirmed. Never copy a previous API key or the enrollment token into chat or an unprotected share.
 
-Back up the database, protected runtime configuration, and Caddy data/PKI using hospital-controlled encrypted backups. Test recovery into an isolated VM. For the SQLite pilot, use Python's SQLite backup API or stop web/worker tasks before copying the database and its WAL state; do not copy a live database file alone. PostgreSQL should use the hospital's database backup process.
+## 10. Backups and recovery
+
+Back up the database, protected runtime configuration, and TLS certificate material using hospital-controlled encrypted backups. Protect CA private keys separately and restrict access. Test recovery into an isolated VM. For the SQLite pilot, use Python's SQLite backup API or stop web/worker tasks before copying the database and its WAL state; do not copy a live database file alone. PostgreSQL should use the hospital's database backup process.
 
 Stop console tasks before replacing program files. Keep the previous package and database backup for rollback. Agent rollback should preserve `key.txt`; removing that key requires a coordinated re-enrollment.
 

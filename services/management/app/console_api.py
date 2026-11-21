@@ -45,6 +45,7 @@ def session_info():
         environment=current_app.config["CONSOLE_ENVIRONMENT"],
         remote_commands=current_app.config["ENABLE_REMOTE_COMMANDS"],
         directory_writes=current_app.config["ENABLE_DIRECTORY_WRITES"],
+        upload_approval_enabled=current_app.config["UPLOAD_APPROVAL_ENABLED"],
     )
 
 
@@ -144,6 +145,34 @@ def recovery_overview():
     return overview()
 
 
+@console.get("/uploads")
+@authenticated
+def upload_list():
+    from .uploads import listing
+    return listing()
+
+
+@console.post("/uploads")
+@authenticated
+def upload_submit():
+    from .uploads import submit
+    return submit()
+
+
+@console.post("/uploads/<int:identifier>/<decision>")
+@authenticated
+def upload_decide(identifier, decision):
+    from .uploads import decide
+    return decide(identifier, decision)
+
+
+@console.get("/uploads/<int:identifier>/download")
+@authenticated
+def upload_download(identifier):
+    from .uploads import download
+    return download(identifier)
+
+
 @console.post("/devices/<int:device_id>/ring")
 @authenticated
 def change_ring(device_id):
@@ -171,8 +200,8 @@ def event_query():
     result = request.args.get("result", "")
     where, params = "WHERE 1=1", []
     if query:
-        where += " AND (device LIKE ? OR win_user LIKE ? OR file LIKE ?)"
-        params.extend([f"%{query}%"] * 3)
+        where += " AND (device LIKE ? OR client_device LIKE ? OR win_user LIKE ? OR ip LIKE ? OR file LIKE ? OR share_name LIKE ?)"
+        params.extend([f"%{query}%"] * 6)
     if result in ("blocked", "allowed", "observed"):
         where += " AND result=?"
         params.append(result)
@@ -202,12 +231,17 @@ def events():
 def export_events():
     where, params = event_query()
     rows = db.q(
-        f"SELECT ts,device,win_user,action,file,result,process FROM file_events {where} ORDER BY id DESC LIMIT 10000",
+        f"SELECT ts,device,client_device,client_match,win_user,ip,share_name,source_event_id,record_id,logon_id,handle_id,access_mask,action,file,result,process "
+        f"FROM file_events {where} ORDER BY id DESC LIMIT 10000",
         params,
     )
     output = io.StringIO()
     writer = csv.writer(output)
-    columns = ("ts", "device", "win_user", "action", "file", "result", "process")
+    columns = (
+        "ts", "device", "client_device", "client_match", "win_user", "ip", "share_name",
+        "source_event_id", "record_id", "logon_id", "handle_id", "access_mask",
+        "action", "file", "result", "process",
+    )
     writer.writerow(columns)
     for row in rows:
         values = []
@@ -346,6 +380,7 @@ def system():
     table_names = (
         "devices",
         "file_events",
+        "device_ip_history",
         "folders",
         "probes",
         "requests",
@@ -354,6 +389,8 @@ def system():
         "admins",
         "settings",
         "recovery_events",
+        "recovery_agents",
+        "upload_requests",
     )
     tables = [
         {"name": name, "rows": db.q(f"SELECT COUNT(*) AS c FROM {name}", one=True)["c"]}
@@ -439,3 +476,4 @@ def schema_download():
         mimetype="application/sql",
         headers={"Content-Disposition": 'attachment; filename="nile-hope-schema.sql"'},
     )
+

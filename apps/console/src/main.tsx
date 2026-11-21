@@ -70,6 +70,7 @@ import "@fontsource-variable/inter";
 import "./style.css";
 import { api, clock, relative, type Row } from "./api";
 import Recovery from "./Recovery";
+import Uploads from "./Uploads";
 
 const Language = createContext({
   lang: "en",
@@ -518,6 +519,7 @@ function Login({ onLogin }: { onLogin: (value: any) => void }) {
 const navItems = [
   { path: "/", icon: LayoutDashboard, en: "Overview", ar: "نظرة عامة" },
   { path: "/recovery", icon: FileClock, en: "Recovery & versions", ar: "الاستعادة والإصدارات" },
+  { path: "/uploads", icon: FileCheck2, en: "Upload approvals", ar: "موافقات الرفع" },
   { path: "/devices", icon: Monitor, en: "Devices", ar: "الأجهزة" },
   {
     path: "/activity",
@@ -752,6 +754,7 @@ function Shell({ session, onLogout }: { session: any; onLogout: () => void }) {
           <Routes>
             <Route path="/" element={<Overview />} />
             <Route path="/recovery" element={<Recovery />} />
+            <Route path="/uploads" element={<Uploads enabled={Boolean(session.upload_approval_enabled)} />} />
             <Route path="/devices" element={<Devices session={session} />} />
             <Route path="/activity" element={<FileActivity />} />
             <Route path="/shares" element={<Shares />} />
@@ -1887,8 +1890,8 @@ function FileActivity() {
         eyebrow={t("SHARED-FILE OBSERVATIONS", "ملاحظات الملفات المشتركة")}
         title={t("File activity", "نشاط الملفات")}
         description={t(
-          "Explore Windows access checks and Linux file-change observations.",
-          "استعرض فحوص الوصول المبلغ عنها من خوادم الملفات.",
+          "Explore Windows SMB and file-system audit events and Linux file-change observations. A client computer is shown only when its event-time IP matches one enrolled device.",
+          "استعرض أحداث تدقيق SMB ونظام الملفات في Windows وتغييرات الملفات في Linux. يظهر جهاز العميل عند تطابق عنوان IP وقت الحدث مع جهاز مسجل واحد.",
         )}
       >
         <button className="btn secondary" onClick={load}>
@@ -1907,8 +1910,8 @@ function FileActivity() {
         <Eye size={18} />
         <p>
           {t(
-            "Observation, not enforcement. An allowed check is not proof that a file was deleted. Denied checks describe results reported by Windows.",
-            "الملاحظات لا تطبق قيوداً. الفحص المسموح لا يثبت حذف ملف، والمرفوض يعكس نتيجة Windows.",
+            "Observation, not enforcement. A permitted access check is not proof that a file was deleted; Windows event 4660 records a completed deletion. Client-device matches use saved IP history and may be unavailable or ambiguous.",
+            "الرصد لا يطبق القيود. فحص الوصول المسموح لا يثبت حذف الملف؛ الحدث 4660 في Windows يسجل اكتمال الحذف. يعتمد ربط جهاز العميل على سجل عناوين IP المحفوظ وقد يكون غير متاح أو ملتبساً.",
           )}
         </p>
       </div>
@@ -1954,7 +1957,7 @@ function FileActivity() {
             <thead>
               <tr>
                 <th>{t("TIME", "الوقت")}</th>
-                <th>{t("DEVICE / USER", "الجهاز / المستخدم")}</th>
+                <th>{t("CLIENT / USER", "العميل / المستخدم")}</th>
                 <th>{t("FILE PATH", "مسار الملف")}</th>
                 <th>{t("ACTION", "الإجراء")}</th>
                 <th>{t("RESULT", "النتيجة")}</th>
@@ -1966,8 +1969,19 @@ function FileActivity() {
                   <td className="nowrap text-muted">{clock(e.ts)}</td>
                   <td>
                     <div className="stack-cell">
-                      <b>{e.device}</b>
+                      <b>{e.client_device || e.device}</b>
                       <small>{e.win_user || "—"}</small>
+                      <small>
+                        {e.client_device
+                          ? `${t("File server", "خادم الملفات")}: ${e.device} · ${e.ip || "—"}`
+                          : `${t("Client IP", "عنوان العميل")}: ${e.ip || t("unmatched", "غير مرتبط")} · ${t("File server", "خادم الملفات")}: ${e.device}`}
+                      </small>
+                      {e.client_match === "ambiguous" && !e.client_device && (
+                        <small>{t("Device match is ambiguous; no device was assigned.", "مطابقة الجهاز غير مؤكدة؛ لم يتم تعيين جهاز.")}</small>
+                      )}
+                      {e.client_match === "unmatched" && !e.client_device && (
+                        <small>{t("No enrolled device matched this IP at event time.", "لم يطابق عنوان IP جهازًا مسجلًا وقت الحدث.")}</small>
+                      )}
                     </div>
                   </td>
                   <td>
@@ -1981,6 +1995,9 @@ function FileActivity() {
                   </td>
                   <td>
                     <Badge>{e.action}</Badge>
+                    {e.source_event_id && (
+                      <small>{t("Windows event", "حدث Windows")} {e.source_event_id} · #{e.record_id}</small>
+                    )}
                   </td>
                   <td>
                     <Result value={e.result} />
@@ -3041,3 +3058,4 @@ createRoot(document.getElementById("root")!).render(
     <App />
   </React.StrictMode>,
 );
+
